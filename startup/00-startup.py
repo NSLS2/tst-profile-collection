@@ -36,3 +36,6 @@ def show_env():
     a = out.decode('utf-8')
     b = a.split('\n')
     print(b[0].split('/')[-1][:-1])
+
+
+PROPOSAL_DIR = "/nsls2/data/tst/legacy/mock-proposals/2024-1/pass-000000"
