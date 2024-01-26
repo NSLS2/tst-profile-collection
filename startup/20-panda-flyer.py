@@ -33,6 +33,31 @@ class PandaFlyer:
         self._resource_document = None
         self._datum_factory = None
 
+        type_map = {"int32": "<i4", "float32": "<f4", "float64": "<f8"}
+
+        self.fields = {
+            "counter1_out": {
+                "value": "COUNTER1.OUT.Value",
+                "dtype_str": type_map["float64"],
+            },
+            "counter2_out": {
+                "value": "COUNTER2.OUT.Value",
+                "dtype_str": type_map["int32"],
+            },
+            "fmc_in_val1": {
+                "value": "FMC_IN.VAL1.Value",
+                "dtype_str": type_map["float64"],
+            },
+            "pcap_gate_duration": {
+                "value": "PCAP.GATE_DURATION.Value",
+                "dtype_str": type_map["float64"],
+            },
+            "pcap_ts_trig": {
+                "value": "PCAP.TS_TRIG.Value",
+                "dtype_str": type_map["float64"],
+            },
+        }
+
     def _prepare(self, params=None):  # TODO: pass inputs via params
         """Prepare scanning parameters."""
         self.panda.clock1.period_units.set("s").wait()
@@ -79,7 +104,7 @@ class PandaFlyer:
         self._prepare()
 
         self._asset_docs_cache = deque()
-        self._datum_docs = deque()
+        self._datum_docs = {}
         self._counter = itertools.count()
 
         # Prepare 'resource' factory.
@@ -100,11 +125,10 @@ class PandaFlyer:
         self._resource_document.pop("run_start")
         self._asset_docs_cache.append(("resource", self._resource_document))
 
-        datum_document = self._datum_factory(
-            datum_kwargs={"field": "COUNTER1.OUT.Value"}
-        )
-        self._asset_docs_cache.append(("datum", datum_document))
-        self._datum_docs.append(datum_document)
+        for key, value in self.fields.items():
+            datum_document = self._datum_factory(datum_kwargs={"field": value["value"]})
+            self._asset_docs_cache.append(("datum", datum_document))
+            self._datum_docs[key] = datum_document
 
         # Kickoff panda process:
         print(f"Starting acquisition ...")
@@ -160,31 +184,35 @@ class PandaFlyer:
         """Describe the data structure."""
         return_dict = {"primary": {}}
 
-        return_dict["primary"].update(
-            {
-                "counter1": {
-                    "source": self.panda.name,
-                    "dtype": "array",
-                    "dtype_str": "<f8",
-                    "shape": [self.n_proj * self.n_series],
-                    "external": "FILESTORE:",
+        for key, value in self.fields.items():
+            return_dict["primary"].update(
+                {
+                    key: {
+                        "source": "PANDA",
+                        "dtype": "array",
+                        "dtype_str": value["dtype_str"],
+                        "shape": [
+                            self.n_proj * self.n_series
+                        ],  # TODO: figure out variable shape
+                        "external": "FILESTORE:",
+                    }
                 }
-            }
-        )
+            )
 
         return return_dict
 
     def collect(self):
-        key = "counter1"
 
-        data_dict = {key: datum_doc["datum_id"] for datum_doc in self._datum_docs}
+        data_dict = {
+            key: datum_doc["datum_id"] for key, datum_doc in self._datum_docs.items()
+        }
 
-        now = ttime.time()
+        now = ttime.time()  # TODO: figure out how to get it from PandABox (maybe?)
         yield {
             "data": data_dict,
-            "timestamps": {key: now},
+            "timestamps": {key: now for key in self._datum_docs},
             "time": now,
-            "filled": {key: False},
+            "filled": {key: False for key in self._datum_docs},
         }
 
     def collect_asset_docs(self):
