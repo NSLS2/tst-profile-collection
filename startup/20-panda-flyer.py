@@ -8,7 +8,7 @@ from ophyd.status import SubscriptionStatus
 
 
 class PandaFlyer:
-    """This flyer works with the 'rotations_sim_03'.
+    """This flyer works with the 'rotations_sim_04'.
 
     Simulation mode with no motor input for now (2024-01-26)."""
 
