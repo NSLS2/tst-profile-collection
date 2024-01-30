@@ -16,6 +16,9 @@ nslsii.configure_base(
     epics_context=False,
 )
 
+# PandA does not produce any data for plots for now.
+bec.disable_plots()
+
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
 from bluesky.callbacks.broker import post_run, verify_files_saved
