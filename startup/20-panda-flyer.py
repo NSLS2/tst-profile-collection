@@ -53,15 +53,7 @@ class PandaFlyer:
                 "dtype_str": type_map["float64"],
             },
             "fmc_in_val3": {
-                "value": "FMC_IN.VAL3.Mean",
-                "dtype_str": type_map["float64"],
-            },
-            "fmc_in_val3": {
-                "value": "FMC_IN.VAL3.Min",
-                "dtype_str": type_map["float64"],
-            },
-            "fmc_in_val3": {
-                "value": "FMC_IN.VAL3.Max",
+                "value": "FMC_IN.VAL3.Value",
                 "dtype_str": type_map["float64"],
             },
             "pcap_gate_duration": {

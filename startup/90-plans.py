@@ -8,7 +8,7 @@ def tomo_demo_01():
     yield from bps.abs_set(rot_motor.spmg, "Stop", wait=True)
     yield from bps.abs_set(rot_motor.spmg, "Go", wait=True)
 
-    yield from bps.sleep(1)
+    yield from bps.sleep(2)
     yield from bp.fly([panda_flyer])
 
     yield from bps.abs_set(rot_motor.spmg, "Stop", wait=True)
