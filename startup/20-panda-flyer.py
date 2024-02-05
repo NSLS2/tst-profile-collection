@@ -23,9 +23,9 @@ class PandaFlyer:
         self.panda = panda
         self.motor = motor
 
-        self.t_period = 0.00002
+        # self.t_period = 0.00002
         self.theta0 = 30
-        self.n_proj = 181
+        self.n_proj = 80
         self.n_series = 3
 
         # Objects needed for the bluesky documents generation:
@@ -36,9 +36,13 @@ class PandaFlyer:
         type_map = {"int32": "<i4", "float32": "<f4", "float64": "<f8"}
 
         self.fields = {
-            "counter1_out": {
-                "value": "COUNTER1.OUT.Value",
-                "dtype_str": type_map["float64"],
+            # "counter1_out": {
+            #     "value": "COUNTER1.OUT.Value",
+            #     "dtype_str": type_map["float64"],
+            # },
+            "inenc1_val": {
+                "value": "INENC1.VAL.Value",
+                "dtype_str": type_map["int32"],
             },
             "counter2_out": {
                 "value": "COUNTER2.OUT.Value",
@@ -46,6 +50,18 @@ class PandaFlyer:
             },
             "fmc_in_val1": {
                 "value": "FMC_IN.VAL1.Value",
+                "dtype_str": type_map["float64"],
+            },
+            "fmc_in_val3": {
+                "value": "FMC_IN.VAL3.Mean",
+                "dtype_str": type_map["float64"],
+            },
+            "fmc_in_val3": {
+                "value": "FMC_IN.VAL3.Min",
+                "dtype_str": type_map["float64"],
+            },
+            "fmc_in_val3": {
+                "value": "FMC_IN.VAL3.Max",
                 "dtype_str": type_map["float64"],
             },
             "pcap_gate_duration": {
@@ -60,22 +76,25 @@ class PandaFlyer:
 
     def _prepare(self, params=None):  # TODO: pass inputs via params
         """Prepare scanning parameters."""
-        self.panda.clock1.period_units.set("s").wait()
-        self.panda.clock1.period.set(self.t_period).wait()
+        # self.panda.clock1.period_units.set("s").wait()
+        # self.panda.clock1.period.set(self.t_period).wait()
 
-        steps_per_turn = 18000
-        self.panda.counter1.start.set(0).wait()
-        self.panda.counter1.min.set(0).wait()
-        self.panda.counter1.step.set(1).wait()
-        self.panda.counter1.max.set(steps_per_turn).wait()
+        print(f"=========== PREPARE")
+        steps_per_turn = 8000
+        # self.panda.counter1.start.set(0).wait()
+        # self.panda.counter1.min.set(0).wait()
+        # self.panda.counter1.step.set(1).wait()
+        # self.panda.counter1.max.set(steps_per_turn).wait()
 
-        steps_per_deg = steps_per_turn / 360
+        steps_per_deg = int(steps_per_turn / 360)
         theta0_steps = self.theta0 * steps_per_deg - 1000
+        print(f"1")
 
         if theta0_steps < 0:
             theta0_steps += steps_per_turn
         elif theta0_steps >= steps_per_turn:
             theta0_steps -= steps_per_turn
+        print(f"{theta0_steps = }")
 
         self.panda.pcomp1.pre_start.set(0).wait()
         self.panda.pcomp1.start.set(theta0_steps).wait()
@@ -83,7 +102,7 @@ class PandaFlyer:
         self.panda.pcomp1.step.set(1000000).wait()
         self.panda.pcomp1.pulses.set(1).wait()
 
-        theta_proj_step = 180 / (self.n_proj - 1)
+        theta_proj_step = int(180 / (self.n_proj - 1))
         proj_step_ = theta_proj_step * steps_per_deg
         proj_step = int(round(proj_step_))
         if abs(proj_step - proj_step_) > 1e-3:
@@ -102,6 +121,7 @@ class PandaFlyer:
         """Kickoff the acquisition process."""
         # Prepare parameters:
         self._prepare()
+        print(f"=========== KICKOFF")
 
         self._asset_docs_cache = deque()
         self._datum_docs = {}
@@ -167,6 +187,7 @@ class PandaFlyer:
         """Wait for the acquisition process started in kickoff to complete."""
         ...
         # Wait until done
+        print(f"=========== COMPLETE")
 
         def done_callback(value, old_value, **kwargs):
             print(f"Running... {old_value} --> {value}, {kwargs}")
