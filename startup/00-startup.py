@@ -18,6 +18,7 @@ nslsii.configure_base(
 
 # PandA does not produce any data for plots for now.
 bec.disable_plots()
+bec.disable_table()
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
@@ -35,6 +36,10 @@ from bluesky.callbacks.broker import post_run, verify_files_saved
 RE.md["facility"] = "NSLS-II"
 RE.md["group"] = "TST"
 RE.md["beamline_id"] = "31-ID-1"
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 import subprocess
 

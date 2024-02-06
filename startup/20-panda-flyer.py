@@ -24,8 +24,8 @@ class PandaFlyer:
         self.motor = motor
 
         # self.t_period = 0.00002
-        self.theta0 = 30
-        self.n_proj = 80
+        self.theta0 = 10
+        self.n_proj = 161
         self.n_series = 3
 
         # Objects needed for the bluesky documents generation:
@@ -68,19 +68,11 @@ class PandaFlyer:
 
     def _prepare(self, params=None):  # TODO: pass inputs via params
         """Prepare scanning parameters."""
-        # self.panda.clock1.period_units.set("s").wait()
-        # self.panda.clock1.period.set(self.t_period).wait()
 
-        print(f"=========== PREPARE")
         steps_per_turn = 8000
-        # self.panda.counter1.start.set(0).wait()
-        # self.panda.counter1.min.set(0).wait()
-        # self.panda.counter1.step.set(1).wait()
-        # self.panda.counter1.max.set(steps_per_turn).wait()
-
-        steps_per_deg = int(steps_per_turn / 360)
-        theta0_steps = self.theta0 * steps_per_deg - 1000
-        print(f"1")
+        comp2_start = 1  # Can not be ZERO
+        steps_per_deg = steps_per_turn / 360
+        theta0_steps = int(self.theta0 * steps_per_deg - comp2_start)
 
         if theta0_steps < 0:
             theta0_steps += steps_per_turn
@@ -94,8 +86,7 @@ class PandaFlyer:
         self.panda.pcomp1.step.set(1000000).wait()
         self.panda.pcomp1.pulses.set(1).wait()
 
-        theta_proj_step = int(180 / (self.n_proj - 1))
-        proj_step_ = theta_proj_step * steps_per_deg
+        proj_step_ = steps_per_turn / 2 / (self.n_proj - 1)
         proj_step = int(round(proj_step_))
         if abs(proj_step - proj_step_) > 1e-3:
             print(f"proj_step_ = {proj_step_}")
@@ -104,7 +95,7 @@ class PandaFlyer:
         print(f"proj_step={proj_step} n_proj={self.n_proj}")
 
         self.panda.pcomp2.pre_start.set(0).wait()
-        self.panda.pcomp2.start.set(1000).wait()
+        self.panda.pcomp2.start.set(comp2_start).wait()
         self.panda.pcomp2.width.set(1).wait()
         self.panda.pcomp2.step.set(proj_step).wait()
         self.panda.pcomp2.pulses.set(self.n_proj).wait()
@@ -113,14 +104,11 @@ class PandaFlyer:
         """Kickoff the acquisition process."""
         # Prepare parameters:
         self._prepare()
-        print(f"=========== KICKOFF")
-
         self._asset_docs_cache = deque()
         self._datum_docs = {}
         self._counter = itertools.count()
 
         # Prepare 'resource' factory.
-
         now = datetime.datetime.now()
         self.fl_path = self._root_dir
         self.fl_name = f"panda_rbdata_{now.strftime('%Y%m%d_%H%M%S')}.h5"
@@ -178,13 +166,12 @@ class PandaFlyer:
     def complete(self):
         """Wait for the acquisition process started in kickoff to complete."""
         ...
-        # Wait until done
-        print(f"=========== COMPLETE")
 
+        # Wait until done
         def done_callback(value, old_value, **kwargs):
-            print(f"Running... {old_value} --> {value}, {kwargs}")
+            # print(f"Running... {old_value} --> {value}, {kwargs}")
             if old_value == 1 and value == 0:  # 1=active, 0=inactive
-                print(f"Done: {old_value} --> {value}, {kwargs}")
+                # print(f"Done: {old_value} --> {value}, {kwargs}")
                 self.panda.pcap.arm.set(0).wait()
                 self.panda.data.capture.set(0).wait()
                 return True
