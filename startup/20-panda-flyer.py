@@ -96,7 +96,7 @@ class PandaFlyer:
 
         self.panda.pcomp2.pre_start.set(0).wait()
         self.panda.pcomp2.start.set(comp2_start).wait()
-        self.panda.pcomp2.width.set(1).wait()
+        self.panda.pcomp2.width.set(20).wait()
         self.panda.pcomp2.step.set(proj_step).wait()
         self.panda.pcomp2.pulses.set(self.n_proj).wait()
 
