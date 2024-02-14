@@ -93,6 +93,6 @@ class PandA_Ophyd1(Device):
     bits = Cpt(BITS, "BITS:")
 
 
-# pnd = PandA_Ophyd1("XF:31ID1-ES{PANDA:3}:", name="pnd")
+pnd = PandA_Ophyd1(r"XF:31ID1-ES{PANDA:3}:", name="pnd")
 # pnd = PandA_Ophyd1("PANDA:3:", name="pnd")  # Panda IOC fails to work with colons (":") in the PV name
-pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
+# pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
