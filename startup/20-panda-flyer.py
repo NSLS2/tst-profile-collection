@@ -2,6 +2,7 @@ import datetime
 import itertools
 import time as ttime
 from collections import deque
+from pprint import pprint
 
 from event_model import compose_resource
 from ophyd.status import SubscriptionStatus
@@ -12,7 +13,7 @@ class PandaFlyer:
 
     Simulation mode with no motor input for now (2024-01-26)."""
 
-    def __init__(self, panda, motor=None, root_dir=None, **kwargs):
+    def __init__(self, panda, motor=None, root_dir=None, verbose=False, **kwargs):
         self.name = "PandaFlyer"
         if root_dir is None:
             raise ValueError("'root_dir' should be specified")
@@ -35,27 +36,8 @@ class PandaFlyer:
 
         type_map = {"int32": "<i4", "float32": "<f4", "float64": "<f8"}
 
+        # TODO: figure out how to add those parameters dynamically to the self.fields.
         self.fields = {
-            # "counter1_out": {
-            #     "value": "COUNTER1.OUT.Value",
-            #     "dtype_str": type_map["float64"],
-            # },
-            "inenc1_val": {
-                "value": "INENC1.VAL.Value",
-                "dtype_str": type_map["int32"],
-            },
-            "counter2_out": {
-                "value": "COUNTER2.OUT.Value",
-                "dtype_str": type_map["int32"],
-            },
-            "fmc_in_val1": {
-                "value": "FMC_IN.VAL1.Value",
-                "dtype_str": type_map["float64"],
-            },
-            "fmc_in_val3": {
-                "value": "FMC_IN.VAL3.Value",
-                "dtype_str": type_map["float64"],
-            },
             "pcap_gate_duration": {
                 "value": "PCAP.GATE_DURATION.Value",
                 "dtype_str": type_map["float64"],
@@ -65,6 +47,20 @@ class PandaFlyer:
                 "dtype_str": type_map["float64"],
             },
         }
+
+        for i, cpt in enumerate(self.panda.positions.component_names):
+            cpt_obj = getattr(self.panda.positions, cpt)
+            capture = cpt_obj.capture.get()
+            param_name = cpt_obj.param_name.get()
+            if capture == "Value":
+                self.fields[f"{param_name.replace(':', '_').lower()}"] = {
+                    "value": f"{param_name.replace(':', '.')}.{capture}",  # e.g., "COUNTER1.OUT.Value",
+                    "dtype_str": type_map[
+                        "float64"
+                    ],  # TODO: figure out how to assign dtypes properly based on the info from the IOC.
+                }
+        if verbose:
+            pprint(self.fields)
 
     def _prepare(self, params=None):  # TODO: pass inputs via params
         """Prepare scanning parameters."""

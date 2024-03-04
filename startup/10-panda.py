@@ -51,14 +51,45 @@ class INENC(Device):
 
 
 class POSITION(Device):
+    param_name = Cpt(EpicsSignal, "NAME", string=True)
+    value = Cpt(EpicsSignal, "VAL")
     units = Cpt(EpicsSignal, "UNITS", string=True)
     scale = Cpt(EpicsSignal, "SCALE")
     offset = Cpt(EpicsSignal, "OFFSET")
+    capture = Cpt(EpicsSignal, "CAPTURE", string=True)
 
 
 class POSITIONS(Device):
-    inenc1 = Cpt(POSITION, "12:")
-    inenc2 = Cpt(POSITION, "13:")
+    calc1 = Cpt(POSITION, "0:")
+    calc2 = Cpt(POSITION, "1:")
+    counter1 = Cpt(POSITION, "2:")
+    counter2 = Cpt(POSITION, "3:")
+    counter3 = Cpt(POSITION, "4:")
+    counter4 = Cpt(POSITION, "5:")
+    counter5 = Cpt(POSITION, "6:")
+    counter6 = Cpt(POSITION, "7:")
+    counter7 = Cpt(POSITION, "8:")
+    counter8 = Cpt(POSITION, "9:")
+    filter1 = Cpt(POSITION, "10:")
+    filter2 = Cpt(POSITION, "11:")
+    fmc_in1 = Cpt(POSITION, "12:")
+    fmc_in2 = Cpt(POSITION, "13:")
+    fmc_in3 = Cpt(POSITION, "14:")
+    fmc_in4 = Cpt(POSITION, "15:")
+    fmc_in5 = Cpt(POSITION, "16:")
+    fmc_in6 = Cpt(POSITION, "17:")
+    fmc_in7 = Cpt(POSITION, "18:")
+    fmc_in8 = Cpt(POSITION, "19:")
+    inenc1 = Cpt(POSITION, "20:")
+    inenc2 = Cpt(POSITION, "21:")
+    inenc3 = Cpt(POSITION, "22:")
+    inenc4 = Cpt(POSITION, "23:")
+    pgen1 = Cpt(POSITION, "24:")
+    pgen2 = Cpt(POSITION, "25:")
+    spf3_pos1 = Cpt(POSITION, "26:")
+    spf3_pos2 = Cpt(POSITION, "27:")
+    spf3_pos3 = Cpt(POSITION, "28:")
+    spf3_pos4 = Cpt(POSITION, "29:")
 
 
 class PULSE(Device):

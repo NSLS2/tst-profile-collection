@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 
 
 def tomo_demo_01(theta0=10, n_proj=161, n_series=3):
@@ -50,7 +50,7 @@ def rbuf_plan(t_period=0.00002, n_total=25000, n_after=10000):
     Use with acq_for_ring_buffer4.
     """
 
-    now = datetime.now()
+    now = datetime.datetime.now()
     fl_path = "/nsls2/data/tst/legacy/mock-proposals/2024-1/pass-000000"
     # fl_path = "/nsls2/users/dgavrilov/panda-test/ring-buffer/ioc-plan/data"
     fl_name = "panda_rbdata_" + now.strftime("%Y%m%d_%H%M%S") + ".h5"
