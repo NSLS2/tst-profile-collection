@@ -24,7 +24,12 @@ from ophyd_async.core import (
     TriggerInfo,
     TriggerLogic,
 )
-from ophyd_async.core.detector import DetectorTrigger, DetectorWriter, StandardDetector, TriggerInfo
+from ophyd_async.core.detector import (
+    DetectorTrigger,
+    DetectorWriter,
+    StandardDetector,
+    TriggerInfo,
+)
 from ophyd_async.core.device import DeviceCollector, DeviceVector
 from ophyd_async.core.flyer import TriggerLogic
 from ophyd_async.core.signal import SignalRW, observe_value
