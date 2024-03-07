@@ -1,3 +1,5 @@
+print(f"Loading file {__file__!r} ...")
+
 import h5py
 from area_detector_handlers import HandlerBase
 
@@ -11,6 +13,7 @@ class PandAHandlerHDF5(HandlerBase):
         self._name = filename
 
     def __call__(self, field):
+        print("reading", field)
         with h5py.File(self._name, "r") as f:
             entry = f[f"/{field}"]
             return entry[:]

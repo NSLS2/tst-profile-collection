@@ -1,15 +1,20 @@
+print(f"Loading file {__file__!r} ...")
+
 import datetime
 
 
 def tomo_demo_01(theta0=10, n_proj=161, n_series=3):
 
     current_pos = yield from bps.rd(rot_motor)
-    print(f"{current_pos = }")
-    yield from bps.abs_set(
-        rot_motor.user_setpoint, current_pos + (n_series + 10) * 360, wait=True
-    )  # or user_setpoint
-    yield from bps.abs_set(rot_motor.spmg, "Stop", wait=True)
-    yield from bps.abs_set(rot_motor.spmg, "Go", wait=True)
+    target_pos = current_pos - (n_series + 10) * 360
+    print(f"{current_pos = } {target_pos =}")
+
+    rot_motor.set(target_pos)
+    # yield from bps.abs_set(rot_motor, target_pos, wait=True)  # or user_setpoint
+    # yield from bps.abs_set(rot_motor.user_setpoint, target_pos, wait=True)  # or user_setpoint
+    # yield from bps.abs_set(rot_motor.spmg, "Stop", wait=True)
+    # yield from bps.abs_set(rot_motor.spmg, "Go", wait=True)
+    yield from bps.abs_set(rot_motor.spmg, "Move", wait=True)
 
     yield from bps.sleep(2)
 
@@ -20,6 +25,9 @@ def tomo_demo_01(theta0=10, n_proj=161, n_series=3):
     yield from bp.fly([panda_flyer])
 
     yield from bps.abs_set(rot_motor.spmg, "Stop", wait=True)
+    # current_pos = yield from bps.rd(rot_motor)
+    # rot_motor.set(current_pos)
+    # yield from bps.abs_set(rot_motor.spmg, "Move", wait=True)
 
 
 def plot_data(scan_id=-1):

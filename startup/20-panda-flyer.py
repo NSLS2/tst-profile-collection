@@ -1,3 +1,5 @@
+print(f"Loading file {__file__!r} ...")
+
 import datetime
 import itertools
 import time as ttime

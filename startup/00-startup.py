@@ -1,4 +1,5 @@
 # Make ophyd listen to pyepics.
+print(f"Loading file {__file__!r} ...")
 from datetime import datetime
 
 import nslsii

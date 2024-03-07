@@ -106,6 +106,9 @@ class BITS(Device):
     D = Cpt(EpicsSignal, "D")
 
 
+print(f"Loading file {__file__!r} ...")
+
+
 class PandA_Ophyd1(Device):
     pcap = Cpt(PCAP, "PCAP:")
     data = Cpt(DATA, "DATA:")

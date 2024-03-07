@@ -1,3 +1,5 @@
+print(f"Loading file {__file__!r} ...")
+
 from ophyd import Component as Cpt
 from ophyd import EpicsMotor, EpicsSignal
 
