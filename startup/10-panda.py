@@ -130,3 +130,42 @@ class PandA_Ophyd1(Device):
 pnd = PandA_Ophyd1(r"XF:31ID1-ES{PANDA:3}:", name="pnd")
 # pnd = PandA_Ophyd1("PANDA:3:", name="pnd")  # Panda IOC fails to work with colons (":") in the PV name
 # pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
+
+
+import asyncio
+
+from ophyd_async.core import StaticDirectoryProvider
+from ophyd_async.core.device import DeviceCollector
+from ophyd_async.panda.panda import PandA
+from ophyd_async.panda.writers import PandaHDFWriter
+
+
+async def instantiate_panda_async():
+    async with DeviceCollector():
+        panda3_async = PandA("XF:31ID1-ES{PANDA:3}", name="panda3_async")
+
+    async with DeviceCollector():
+        dir_prov = StaticDirectoryProvider(PROPOSAL_DIR, "test-ophyd-async3")
+        writer3 = PandaHDFWriter(
+            "XF:31ID1-ES{PANDA:3}",
+            dir_prov,
+            lambda: "test-panda",
+            panda_device=panda3_async,
+        )
+
+    for name, obj in dict(panda3_async.data.children()).items():
+        print(f"{name}: {await obj.read()}")
+
+    return panda3_async, writer3
+
+
+panda3_async, writer3 = asyncio.run(instantiate_panda_async())
+
+
+def count_async_panda(panda_device, writer):
+    asyncio.wait(writer.open())
+    yield from bps.mv(panda_device.pcap.arm, 1)
+    yield from bps.sleep(5)
+    yield from bps.mv(panda_device.pcap.arm, 0)
+    yield from bps.sleep(1)
+    asyncio.wait(writer.close())
