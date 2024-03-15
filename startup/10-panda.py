@@ -1,6 +1,7 @@
 import asyncio
+import datetime
+import json
 import time as ttime
-from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from threading import Thread
@@ -13,7 +14,24 @@ from bluesky.utils import ProgressBarManager
 from epics import caget, caput
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsMotor, EpicsPathSignal, EpicsSignal, EpicsSignalWithRBV
+from ophyd_async.core import (
+    DEFAULT_TIMEOUT,
+    DetectorControl,
+    DetectorTrigger,
+    DetectorWriter,
+    HardwareTriggeredFlyable,
+    SignalRW,
+    SimSignalBackend,
+    StaticDirectoryProvider,
+    TriggerInfo,
+    TriggerLogic,
+)
 from ophyd_async.core.async_status import AsyncStatus
+from ophyd_async.core.detector import StandardDetector
+from ophyd_async.core.device import DeviceCollector
+from ophyd_async.panda.panda import PandA
+from ophyd_async.panda.panda_controller import PandaPcapController
+from ophyd_async.panda.writers import PandaHDFWriter
 
 
 class DATA(Device):
@@ -137,14 +155,6 @@ pnd = PandA_Ophyd1(r"XF:31ID1-ES{PANDA:3}:", name="pnd")
 # pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
 
 
-import asyncio
-
-from ophyd_async.core import StaticDirectoryProvider
-from ophyd_async.core.device import DeviceCollector
-from ophyd_async.panda.panda import PandA
-from ophyd_async.panda.writers import PandaHDFWriter
-
-
 async def print_children(device):
     for name, obj in dict(device.children()).items():
         print(f"{name}: {await obj.read()}")
@@ -213,20 +223,6 @@ def _count_async_panda_run(panda_device, writer):
     asyncio.run(writer.close())
 
 
-from ophyd_async.core import (
-    DEFAULT_TIMEOUT,
-    DetectorControl,
-    DetectorTrigger,
-    DetectorWriter,
-    HardwareTriggeredFlyable,
-    SignalRW,
-    SimSignalBackend,
-    TriggerInfo,
-    TriggerLogic,
-)
-from ophyd_async.core.detector import StandardDetector
-
-
 class TriggerState(str, Enum):
     null = "null"
     preparing = "preparing"
@@ -253,8 +249,6 @@ class PandATriggerLogic(TriggerLogic[int]):
     async def stop(self):
         self.state = TriggerState.stopping
 
-
-from ophyd_async.panda.panda_controller import PandaPcapController
 
 panda3_trigger_logic = PandATriggerLogic()
 pcap_controller = PandaPcapController(panda3_async.pcap)
@@ -305,3 +299,21 @@ def panda3_fly():
     yield from bps.close_run()
 
     yield from bps.unstage_all(panda3_flyer, panda3_standard_det)
+
+
+class JSONLWriter:
+    def __init__(self, filepath):
+        self.file = open(filepath, "w")
+
+    def __call__(self, name, doc):
+        json.dump({"name": name, "doc": doc}, self.file)
+        self.file.write("\n")
+        if name == "stop":
+            self.file.close()
+
+
+def now():
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+jlw = JSONLWriter(f"/tmp/export-docs-{now()}.json")

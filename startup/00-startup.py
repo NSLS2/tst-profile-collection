@@ -1,9 +1,13 @@
 # Make ophyd listen to pyepics.
 print(f"Loading file {__file__!r} ...")
-from datetime import datetime
+import datetime
+import logging
+import subprocess
+import warnings
 
 import nslsii
 import ophyd.signal
+from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.run_engine import call_in_bluesky_event_loop
 from IPython import get_ipython
 
@@ -30,13 +34,10 @@ bec.disable_table()
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
-from bluesky.callbacks.broker import post_run, verify_files_saved
-
 # RE.subscribe(post_run(verify_files_saved, db), 'stop')
 
 # Uncomment the following lines to turn on verbose messages for
 # debugging.
-# import logging
 # ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -45,11 +46,8 @@ RE.md["facility"] = "NSLS-II"
 RE.md["group"] = "TST"
 RE.md["beamline_id"] = "31-ID-1"
 
-import warnings
 
 warnings.filterwarnings("ignore")
-
-import subprocess
 
 
 def show_env():
