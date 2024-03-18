@@ -25,6 +25,7 @@ from ophyd_async.core import (
     StaticDirectoryProvider,
     TriggerInfo,
     TriggerLogic,
+    UUIDDirectoryProvider,
 )
 from ophyd_async.core.async_status import AsyncStatus
 from ophyd_async.core.detector import StandardDetector
@@ -155,6 +156,19 @@ pnd = PandA_Ophyd1(r"XF:31ID1-ES{PANDA:3}:", name="pnd")
 # pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
 
 
+##########################################################################
+#                         _       ____                                   #
+#                        | |     |___ \                                  #
+#   _ __   __ _ _ __   __| | __ _  __) |_____ __ _ ___ _   _ _ __   ___  #
+#  | '_ \ / _` | '_ \ / _` |/ _` ||__ <______/ _` / __| | | | '_ \ / __| #
+#  | |_) | (_| | | | | (_| | (_| |___) |    | (_| \__ \ |_| | | | | (__  #
+#  | .__/ \__,_|_| |_|\__,_|\__,_|____/      \__,_|___/\__, |_| |_|\___| #
+#  | |                                                  __/ |            #
+#  |_|                                                 |___/             #
+#                                                                        #
+##########################################################################
+
+
 async def print_children(device):
     for name, obj in dict(device.children()).items():
         print(f"{name}: {await obj.read()}")
@@ -165,7 +179,7 @@ async def instantiate_panda_async():
         panda3_async = PandA("XF:31ID1-ES{PANDA:3}:", name="panda3_async")
 
     async with DeviceCollector():
-        dir_prov = StaticDirectoryProvider(PROPOSAL_DIR, "test-ophyd-async4")
+        dir_prov = UUIDDirectoryProvider(PROPOSAL_DIR)
         writer3 = PandaHDFWriter(
             "XF:31ID1-ES{PANDA:3}",
             dir_prov,
@@ -253,17 +267,48 @@ class PandATriggerLogic(TriggerLogic[int]):
 panda3_trigger_logic = PandATriggerLogic()
 pcap_controller = PandaPcapController(panda3_async.pcap)
 
+
+class PandA3StandardDet(StandardDetector):
+
+    def __init__(
+        self,
+        pcap_controller: PandaPcapController,
+        writer: PandaHDFWriter,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(pcap_controller, writer, *args, **kwargs)
+        self.pcap_controller = pcap_controller
+
+    async def _wait(self):
+        pcap_active = await self.pcap_controller.pcap.active.get_value()
+        print(f"{pcap_active=}")
+        while pcap_active:
+            pcap_active = await self.pcap_controller.pcap.active.get_value()
+            print(f"  {pcap_active=}")
+            await asyncio.sleep(0.1)
+
+    @AsyncStatus.wrap
+    async def complete(self):
+        wait_st = AsyncStatus(self._wait())
+        # TODO: discuss with Diamond about And and Or statuses.
+        return await wait_st
+
+
 panda3_standard_det = StandardDetector(
     pcap_controller, writer3, name="panda3_standard_det"
 )
 
+
 panda3_flyer = HardwareTriggeredFlyable(panda3_trigger_logic, [], name="panda3_flyer")
 
 
-def panda3_fly():
+def panda3_fly(
+    num=724,
+):  # Note: 724 points are specific for the "rotation_sim_04" panda config!
     yield from bps.stage_all(panda3_standard_det, panda3_flyer)
     assert panda3_flyer._trigger_logic.state == TriggerState.stopping
-    yield from bps.prepare(panda3_flyer, 1, wait=True)
+    yield from bps.prepare(panda3_flyer, num, wait=True)
     yield from bps.prepare(panda3_standard_det, panda3_flyer.trigger_info, wait=True)
 
     detector = panda3_standard_det
@@ -274,8 +319,8 @@ def panda3_fly():
     yield from bps.kickoff(panda3_flyer)
     yield from bps.kickoff(detector)
 
-    yield from bps.complete(panda3_flyer, wait=False, group="complete")
-    yield from bps.complete(detector, wait=False, group="complete")
+    yield from bps.complete(panda3_flyer, wait=True, group="complete")
+    yield from bps.complete(detector, wait=True, group="complete")
 
     # Manually incremenet the index as if a frame was taken
     # detector.writer.index += 1
@@ -296,6 +341,8 @@ def panda3_fly():
         )
         yield from bps.sleep(0.01)
     yield from bps.wait(group="complete")
+    val = yield from bps.rd(writer3.hdf.num_captured)
+    print(f"{val = }")
     yield from bps.close_run()
 
     yield from bps.unstage_all(panda3_flyer, panda3_standard_det)
