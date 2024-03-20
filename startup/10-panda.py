@@ -1,3 +1,5 @@
+print(f"Loading file {__file__!r} ...")
+
 import asyncio
 import datetime
 import json
@@ -128,9 +130,6 @@ class BITS(Device):
     B = Cpt(EpicsSignal, "B")
     C = Cpt(EpicsSignal, "C")
     D = Cpt(EpicsSignal, "D")
-
-
-print(f"Loading file {__file__!r} ...")
 
 
 class PandA_Ophyd1(Device):
