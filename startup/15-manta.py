@@ -66,7 +66,7 @@ class MantaShapeProvider(ShapeProvider):
         pass
 
     async def __call__(self):
-        return (544, 728)
+        return (544, 728)  # y, x
 
 
 def instantiate_panda_async():
