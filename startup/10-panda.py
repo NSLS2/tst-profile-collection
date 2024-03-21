@@ -173,16 +173,28 @@ async def print_children(device):
         print(f"{name}: {await obj.read()}")
 
 
+class TSTPandaHDFWriter(PandaHDFWriter):
+    async def open(self, *args, **kwargs):
+        desc = await super().open(*args, **kwargs)
+        # prefix = self._name_provider()
+        for key in desc:
+            if "-counter2-out-" in key:
+                desc[key]["dtype_str"] = "<i4"
+            else:
+                desc[key]["dtype_str"] = "<f8"
+        return desc
+
+
 async def instantiate_panda_async():
     async with DeviceCollector():
         panda3_async = PandA("XF:31ID1-ES{PANDA:3}:", name="panda3_async")
 
     async with DeviceCollector():
         dir_prov = UUIDDirectoryProvider(PROPOSAL_DIR)
-        writer3 = PandaHDFWriter(
+        writer3 = TSTPandaHDFWriter(
             "XF:31ID1-ES{PANDA:3}",
             dir_prov,
-            lambda: "test-panda",
+            lambda: "lab3-panda3",
             panda_device=panda3_async,
         )
         print_children(panda3_async)
