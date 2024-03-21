@@ -1,11 +1,13 @@
 # Make ophyd listen to pyepics.
 print(f"Loading file {__file__!r} ...")
+
 import datetime
 import logging
 import os
 import subprocess
 import warnings
 
+import epics
 import nslsii
 import ophyd.signal
 from bluesky.callbacks.broker import post_run, verify_files_saved
@@ -30,11 +32,11 @@ nslsii.configure_base(
     mpl=True,
     epics_context=False,
 )
-RE.unsubscribe(0)  # remove temp databroker subscription
+# RE.unsubscribe(0)  # remove temp databroker subscription
 
-tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
-tw = TiledWriter(tiled_client)
-RE.subscribe(tw)
+# tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
+# tw = TiledWriter(tiled_client)
+# RE.subscribe(tw)
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
 get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")
