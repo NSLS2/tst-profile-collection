@@ -261,7 +261,7 @@ class PandATriggerLogic(TriggerLogic[int]):
 
     def trigger_info(self, value: int) -> TriggerInfo:
         return TriggerInfo(
-            num=value, trigger=DetectorTrigger.constant_gate, deadtime=2, livetime=2
+            num=value, trigger=DetectorTrigger.constant_gate, deadtime=0.1, livetime=0.1
         )
 
     async def prepare(self, value: int):

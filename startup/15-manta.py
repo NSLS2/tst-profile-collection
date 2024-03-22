@@ -2,6 +2,7 @@ print(f"Loading file {__file__!r} ...")
 
 
 import asyncio
+from dataclasses import dataclass
 from enum import Enum
 
 from ophyd_async.core import (
@@ -38,13 +39,22 @@ class TriggerState(str, Enum):
     stopping = "stopping"
 
 
+@dataclass
+class MantaTriggerSetup:
+    num_images: int
+    exposure_time: float
+
+
 class MantaTriggerLogic(TriggerLogic[int]):
     def __init__(self):
         self.state = TriggerState.null
 
-    def trigger_info(self, value: int) -> TriggerInfo:
+    def trigger_info(self, setup) -> TriggerInfo:
         return TriggerInfo(
-            num=value, trigger=DetectorTrigger.internal, deadtime=2, livetime=2
+            num=setup.num_images,
+            trigger=DetectorTrigger.constant_gate,
+            deadtime=0.1,
+            livetime=setup.exposure_time,
         )
 
     async def prepare(self, value: int):
@@ -140,6 +150,7 @@ def manta_fly(
             name="main_stream",
         )
         yield from bps.sleep(0.01)
+
     yield from bps.wait(group="complete")
     val = yield from bps.rd(manta_writer.hdf.num_captured)
     print(f"{val = }")
