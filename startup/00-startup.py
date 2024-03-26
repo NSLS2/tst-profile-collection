@@ -1,29 +1,46 @@
 # Make ophyd listen to pyepics.
 print(f"Loading file {__file__!r} ...")
+
+import asyncio
 import datetime
 import logging
+import os
 import subprocess
 import warnings
 
+import epicscorelibs.path.pyepics
 import nslsii
 import ophyd.signal
 from bluesky.callbacks.broker import post_run, verify_files_saved
-from bluesky.run_engine import call_in_bluesky_event_loop
+from bluesky.callbacks.tiled_writer import TiledWriter
+from bluesky.run_engine import RunEngine, call_in_bluesky_event_loop
+from databroker.v0 import Broker
 from IPython import get_ipython
+from tiled.client import from_uri
 
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 # See docstring for nslsii.configure_base() for more details
-# this command takes away much of the boilerplate for settting up a profile
-# (such as setting up best effort callbacks etc)
+# this command takes away much of the boilerplate for setting up a profile
+# (such as setting up best-effort callback, etc)
+
+
 nslsii.configure_base(
     get_ipython().user_ns,
-    "tst",
+    Broker.named("temp"),
     pbar=True,
     bec=True,
     magics=True,
     mpl=True,
     epics_context=False,
 )
+
+event_loop = asyncio.get_event_loop()
+RE = RunEngine(loop=event_loop)
+RE.subscribe(bec)
+
+tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
+tw = TiledWriter(tiled_client)
+RE.subscribe(tw)
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
 get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")

@@ -1,3 +1,5 @@
+print(f"Loading file {__file__!r} ...")
+
 import asyncio
 import datetime
 import json
@@ -130,9 +132,6 @@ class BITS(Device):
     D = Cpt(EpicsSignal, "D")
 
 
-print(f"Loading file {__file__!r} ...")
-
-
 class PandA_Ophyd1(Device):
     pcap = Cpt(PCAP, "PCAP:")
     data = Cpt(DATA, "DATA:")
@@ -174,16 +173,28 @@ async def print_children(device):
         print(f"{name}: {await obj.read()}")
 
 
-async def instantiate_panda_async():
-    async with DeviceCollector():
+class TSTPandaHDFWriter(PandaHDFWriter):
+    async def open(self, *args, **kwargs):
+        desc = await super().open(*args, **kwargs)
+        # prefix = self._name_provider()
+        for key in desc:
+            if "-counter2-out-" in key:
+                desc[key]["dtype_str"] = "<i4"
+            else:
+                desc[key]["dtype_str"] = "<f8"
+        return desc
+
+
+def instantiate_panda_async():
+    with DeviceCollector():
         panda3_async = PandA("XF:31ID1-ES{PANDA:3}:", name="panda3_async")
 
-    async with DeviceCollector():
+    with DeviceCollector():
         dir_prov = UUIDDirectoryProvider(PROPOSAL_DIR)
-        writer3 = PandaHDFWriter(
+        writer3 = TSTPandaHDFWriter(
             "XF:31ID1-ES{PANDA:3}",
             dir_prov,
-            lambda: "test-panda",
+            lambda: "lab3-panda3",
             panda_device=panda3_async,
         )
         print_children(panda3_async)
@@ -191,7 +202,7 @@ async def instantiate_panda_async():
     return panda3_async, writer3
 
 
-panda3_async, writer3 = asyncio.run(instantiate_panda_async())
+panda3_async, writer3 = instantiate_panda_async()
 
 
 @AsyncStatus.wrap
@@ -232,9 +243,9 @@ def _count_async_panda_run(panda_device, writer):
     An exception has occurred, use '%tb verbose' to see the full traceback.
     RuntimeError: asyncio.run() cannot be called from a running event loop
     """
-    asyncio.run(writer.open())
+    # asyncio.run(writer.open())
     yield from arm(panda_device)
-    asyncio.run(writer.close())
+    # asyncio.run(writer.close())
 
 
 class TriggerState(str, Enum):
@@ -250,7 +261,7 @@ class PandATriggerLogic(TriggerLogic[int]):
 
     def trigger_info(self, value: int) -> TriggerInfo:
         return TriggerInfo(
-            num=value, trigger=DetectorTrigger.constant_gate, deadtime=2, livetime=2
+            num=value, trigger=DetectorTrigger.constant_gate, deadtime=0.1, livetime=0.1
         )
 
     async def prepare(self, value: int):
