@@ -120,11 +120,13 @@ def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None)
             "The number of encoder counts per pulse is not an integer value!"
         )
 
-    # step_time = (scan_time / num_images)
-    # camera_exposure_time =  step_time / 2
-    # if exposure_time is not None:
-    #     if exposure_time > step_time:
-    #         raise RuntimeError(f"Your configured exposure time is longer than the step size {step_time}")
+    step_time = scan_time / num_images
+    camera_exposure_time = step_time / 2
+    if exposure_time is not None:
+        if exposure_time > step_time:
+            raise RuntimeError(
+                f"Your configured exposure time is longer than the step size {step_time}"
+            )
     camera_exposure_time = exposure_time
 
     manta_exp_setup = MantaTriggerSetup(
@@ -149,9 +151,11 @@ def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None)
 
     # Set up the pcomp block
     yield from bps.mv(panda3_pcomp_1.start, int(start_encoder))
-    yield from bps.mv(
-        panda3_pcomp_1.width, width_in_counts
-    )  # Width in encoder counts that the pulse will be high
+
+    # Uncomment if using gate trigger mode on camera
+    # yield from bps.mv(
+    #    panda3_pcomp_1.width, width_in_counts
+    # )  # Width in encoder counts that the pulse will be high
     yield from bps.mv(panda3_pcomp_1.step, step_width_counts)
     yield from bps.mv(panda3_pcomp_1.pulses, num_images)
 

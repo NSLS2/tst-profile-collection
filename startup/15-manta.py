@@ -52,7 +52,7 @@ class MantaTriggerLogic(TriggerLogic[int]):
     def trigger_info(self, setup) -> TriggerInfo:
         return TriggerInfo(
             num=setup.num_images,
-            trigger=DetectorTrigger.constant_gate,
+            trigger=DetectorTrigger.edge_trigger,
             deadtime=0.1,
             livetime=setup.exposure_time,
         )
