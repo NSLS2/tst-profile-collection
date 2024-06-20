@@ -110,9 +110,16 @@ DEG_PER_REVOLUTION = 360
 COUNTS_PER_DEG = COUNTS_PER_REVOLUTION / DEG_PER_REVOLUTION
 
 
-def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None):
+def tomo_demo_async(
+    panda=panda3_async,
+    detector=manta1_async,
+    num_images=21,
+    scan_time=9,
+    start_deg=0,
+    exposure_time=None,
+):
 
-    panda3_pcomp_1 = dict(panda3_async.pcomp.children())["1"]
+    panda3_pcomp_1 = dict(panda.pcomp.children())["1"]
 
     step_width_counts = COUNTS_PER_REVOLUTION / (2 * (num_images - 1))
     if int(step_width_counts) != round(step_width_counts, 5):
@@ -129,8 +136,14 @@ def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None)
             )
     camera_exposure_time = exposure_time
 
-    manta_exp_setup = MantaTriggerSetup(
-        num_images=num_images, exposure_time=camera_exposure_time
+    panda_devices = [panda, panda_flyer]
+    detector_devices = [detector, manta_flyer]
+    all_devices = panda_devices + detector_devices
+
+    det_exp_setup = StandardTriggerSetup(
+        num_frames=num_images,
+        exposure_time=exposure_time,
+        software_trigger=False,
     )
 
     yield from bps.mv(
@@ -159,6 +172,12 @@ def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None)
     yield from bps.mv(panda3_pcomp_1.step, step_width_counts)
     yield from bps.mv(panda3_pcomp_1.pulses, num_images)
 
+    yield from bps.open_run()
+
+    detector._writer._path_provider._filename_provider.set_frame_type(
+        TomoFrameType.proj
+    )
+
     # The setup below is happening in the VimbaController's arm method.
     # # Setup camera in trigger mode
     # yield from bps.mv(manta_async.trigger_mode, "On")
@@ -167,63 +186,85 @@ def tomo_demo_async(num_images=21, scan_time=9, start_deg=0, exposure_time=None)
     # yield from bps.mv(manta_async.expose_out_mode, "TriggerWidth")  # "Timed" or "TriggerWidth"
 
     # Stage All!
-    yield from bps.stage_all(manta_standard_det, manta_flyer)
-    assert manta_flyer._trigger_logic.state == TriggerState.stopping
-    yield from bps.prepare(manta_flyer, manta_exp_setup, wait=True)
-    yield from bps.prepare(manta_standard_det, manta_flyer.trigger_info, wait=True)
+    yield from bps.stage_all(*detectors)
+    yield from bps.mv(detector._writer.hdf.num_capture, num_images)
 
-    yield from bps.stage_all(panda3_standard_det, panda3_flyer)
-    assert panda3_flyer._trigger_logic.state == TriggerState.stopping
-    yield from bps.prepare(panda3_flyer, num_images, wait=True)
-    yield from bps.prepare(panda3_standard_det, panda3_flyer.trigger_info, wait=True)
+    assert manta_flyer._trigger_logic.state == TriggerState.stopping
+
+    yield from bps.prepare(manta_flyer, det_exp_setup, wait=True)
+    yield from bps.prepare(detector, manta_flyer.trigger_info(det_exp_setup), wait=True)
+
+    assert panda_flyer._trigger_logic.state == TriggerState.stopping
+    yield from bps.prepare(panda_flyer, num_images, wait=True)
+    yield from bps.prepare(panda, panda3_flyer.trigger_info(num_images), wait=True)
 
     yield from bps.mv(rot_motor, start_deg + DEG_PER_REVOLUTION / 2 + 5)
 
-    detector = panda3_standard_det
-    # detector.controller.disarm.assert_called_once  # type: ignore
+    for device in all_devices:
+        yield from bps.kickoff(device)
 
-    yield from bps.open_run()
+    for flyer_or_panda in panda_devices:
+        yield from bps.complete(flyer_or_panda, wait=True, group="complete_panda")
 
-    yield from bps.kickoff(panda3_flyer)
-    yield from bps.kickoff(detector)
-
-    yield from bps.complete(panda3_flyer, wait=True, group="complete")
-    yield from bps.complete(detector, wait=True, group="complete")
+    for flyer_or_det in detector_devices:
+        yield from bps.complete(flyer_or_det, wait=True, group="complete_detector")
 
     # Manually incremenet the index as if a frame was taken
     # detector.writer.index += 1
 
+    # Wait for completion of the PandA HDF5 file saving.
     done = False
     while not done:
         try:
-            yield from bps.wait(group="complete", timeout=0.5)
+            yield from bps.wait(group="complete_panda", timeout=0.5)
         except TimeoutError:
             pass
         else:
             done = True
+
+        panda_stream_name = f"{panda.name}_stream"
+        yield from bps.declare_stream(panda, name=panda_stream_name)
+
+        yield from bps.collect(
+            panda,
+            # stream=True,
+            # return_payload=False,
+            name=panda_stream_name,
+        )
+
+    yield from bps.unstage_all(*panda_devices)
+
+    # Wait for completion of the AD HDF5 file saving.
+    done = False
+    while not done:
+        try:
+            yield from bps.wait(group="complete_detector", timeout=0.5)
+        except TimeoutError:
+            pass
+        else:
+            done = True
+
+        detector_stream_name = f"{detector.name}_stream"
+        yield from bps.declare_stream(detector, name=detector_stream_name)
+
         yield from bps.collect(
             detector,
-            stream=True,
-            return_payload=False,
-            name=f"{detector.name}_stream",
-        )
-        yield from bps.collect(
-            manta_standard_det,
-            stream=True,
-            return_payload=False,
-            name=f"{manta_standard_det.name}_stream",
+            # stream=True,
+            # return_payload=False,
+            name=detector_stream_name,
         )
         yield from bps.sleep(0.01)
 
-    yield from bps.wait(group="complete")
     yield from bps.close_run()
 
-    panda_val = yield from bps.rd(writer3.hdf.num_captured)
-    manta_val = yield from bps.rd(manta_writer.hdf.num_captured)
-    print(f"{panda_val = }    {manta_val = }")
+    panda_val = yield from bps.rd(panda.data.num_captured)
+    kinetix_val = yield from bps.rd(detector._writer.hdf.num_captured)
+    print(f"{panda_val = }    {kinetix_val = }")
 
-    yield from bps.unstage_all(panda3_flyer, detector)
-    yield from bps.unstage_all(manta_flyer, manta_standard_det)
+    yield from bps.unstage_all(*detector_devices)
 
     # Reset the velocity back to high.
     yield from bps.mv(rot_motor.velocity, 180 / 2)
+
+
+file_loading_timer.stop_timer(__file__)
