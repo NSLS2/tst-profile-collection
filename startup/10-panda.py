@@ -1,6 +1,13 @@
+print(f"Loading file {__file__!r} ...")
+
+import asyncio
+import datetime
+import json
 import time as ttime
-from datetime import datetime
+from enum import Enum
+from pathlib import Path
 from threading import Thread
+from typing import AsyncGenerator, AsyncIterator, Dict, List, Optional
 
 import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
@@ -9,6 +16,25 @@ from bluesky.utils import ProgressBarManager
 from epics import caget, caput
 from ophyd import Component as Cpt
 from ophyd import Device, EpicsMotor, EpicsPathSignal, EpicsSignal, EpicsSignalWithRBV
+from ophyd_async.core import (
+    DEFAULT_TIMEOUT,
+    DetectorControl,
+    DetectorTrigger,
+    DetectorWriter,
+    HardwareTriggeredFlyable,
+    SignalRW,
+    SimSignalBackend,
+    StaticDirectoryProvider,
+    TriggerInfo,
+    TriggerLogic,
+    UUIDDirectoryProvider,
+)
+from ophyd_async.core.async_status import AsyncStatus
+from ophyd_async.core.detector import StandardDetector
+from ophyd_async.core.device import DeviceCollector
+from ophyd_async.panda.panda import PandA
+from ophyd_async.panda.panda_controller import PandaPcapController
+from ophyd_async.panda.writers import PandaHDFWriter
 
 
 class DATA(Device):
@@ -106,9 +132,6 @@ class BITS(Device):
     D = Cpt(EpicsSignal, "D")
 
 
-print(f"Loading file {__file__!r} ...")
-
-
 class PandA_Ophyd1(Device):
     pcap = Cpt(PCAP, "PCAP:")
     data = Cpt(DATA, "DATA:")
@@ -130,3 +153,100 @@ class PandA_Ophyd1(Device):
 pnd = PandA_Ophyd1(r"XF:31ID1-ES{PANDA:3}:", name="pnd")
 # pnd = PandA_Ophyd1("PANDA:3:", name="pnd")  # Panda IOC fails to work with colons (":") in the PV name
 # pnd = PandA_Ophyd1("XF31ID1-ES-PANDA-3:", name="pnd")
+
+
+##########################################################################
+#                         _       ____                                   #
+#                        | |     |___ \                                  #
+#   _ __   __ _ _ __   __| | __ _  __) |_____ __ _ ___ _   _ _ __   ___  #
+#  | '_ \ / _` | '_ \ / _` |/ _` ||__ <______/ _` / __| | | | '_ \ / __| #
+#  | |_) | (_| | | | | (_| | (_| |___) |    | (_| \__ \ |_| | | | | (__  #
+#  | .__/ \__,_|_| |_|\__,_|\__,_|____/      \__,_|___/\__, |_| |_|\___| #
+#  | |                                                  __/ |            #
+#  |_|                                                 |___/             #
+#                                                                        #
+##########################################################################
+
+
+async def print_children(device):
+    for name, obj in dict(device.children()).items():
+        print(f"{name}: {await obj.read()}")
+
+
+panda_trigger_logic = StandardTriggerLogic(trigger_mode=DetectorTrigger.constant_gate)
+panda_flyer = HardwareTriggeredFlyable(panda_trigger_logic, [], name="panda_flyer")
+
+
+def instantiate_panda_async(panda_id):
+    print(f"Connecting to PandA #{panda_id}")
+    with DeviceCollector():
+        panda_path_provider = ProposalNumYMDPathProvider(default_filename_provider)
+        panda_async = HDFPanda(
+            f"XF:31ID1-ES{{PANDA:{panda_id}}}:",
+            panda_path_provider,
+            name=f"panda{panda_id}_async",
+        )
+        # print_children(panda_async)
+    print("Done.")
+
+    return panda_async
+
+
+panda3_async = instantiate_panda_async(3)
+
+
+@AsyncStatus.wrap
+async def openw(writer):
+    describe = await writer.open()
+
+
+@AsyncStatus.wrap
+async def closew(writer):
+    await writer.close()
+
+
+def panda_fly(panda, num=724):
+    yield from bps.stage_all(panda, panda_flyer)
+    yield from bps.prepare(panda_flyer, num, wait=True)
+    yield from bps.prepare(
+        panda, panda_flyer.trigger_logic.trigger_info(num), wait=True
+    )
+
+    detector = panda
+    # detector.controller.disarm.assert_called_once  # type: ignore
+
+    yield from bps.open_run()
+
+    yield from bps.kickoff(panda_flyer)
+    yield from bps.kickoff(detector)
+
+    yield from bps.complete(panda_flyer, wait=True, group="complete")
+    yield from bps.complete(detector, wait=True, group="complete")
+
+    # Manually incremenet the index as if a frame was taken
+    # detector.writer.index += 1
+
+    done = False
+    while not done:
+        try:
+            yield from bps.wait(group="complete", timeout=0.5)
+        except TimeoutError:
+            pass
+        else:
+            done = True
+        yield from bps.collect(
+            panda,
+            # stream=False,
+            # return_payload=False,
+            name="main_stream",
+        )
+        yield from bps.sleep(0.01)
+    yield from bps.wait(group="complete")
+    val = yield from bps.rd(panda.data.num_captured)
+    print(f"{val = }")
+    yield from bps.close_run()
+
+    yield from bps.unstage_all(panda_flyer, panda)
+
+
+file_loading_timer.stop_timer(__file__)
