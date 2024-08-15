@@ -5,24 +5,17 @@ import asyncio
 from dataclasses import dataclass
 from enum import Enum
 
-from ophyd import EpicsSignalRO
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
     DetectorControl,
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
-    HardwareTriggeredFlyable,
     ShapeProvider,
     SignalRW,
     TriggerInfo,
     TriggerLogic,
 )
-from ophyd_async.core.async_status import AsyncStatus
-from ophyd_async.core.detector import StandardDetector
-from ophyd_async.core.device import DeviceCollector
-
-HEX_PROPOSAL_DIR_ROOT = "/nsls2/data/hex/proposals"
 
 
 class TomoFrameType(Enum):
@@ -43,17 +36,24 @@ class StandardTriggerState(str, Enum):
 class StandardTriggerSetup:
     num_frames: int
     exposure_time: float
-    software_trigger: bool
+    trigger_mode: DetectorTrigger
+
+
+def gen_software_trigger_setup(num_frames, exp_time):
+    return StandardTriggerSetup(
+        num_frames=num_frames,
+        exposure_time=exp_time,
+        trigger_mode=DetectorTrigger.internal,
+    )
 
 
 class StandardTriggerLogic(TriggerLogic[int]):
-    def __init__(self, trigger_mode=DetectorTrigger.internal):
+    def __init__(self):
         self.state = StandardTriggerState.null
-        self.trigger_mode = trigger_mode
 
     def trigger_info(self, setup) -> TriggerInfo:
         exposure = 0.1
-        trigger = self.trigger_mode
+        trigger = DetectorTrigger.internal
         num_images = setup
         if isinstance(setup, StandardTriggerSetup):
             if (

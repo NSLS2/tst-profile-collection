@@ -12,11 +12,13 @@ import warnings
 import epicscorelibs.path.pyepics
 import nslsii
 import ophyd.signal
+import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
 from bluesky.run_engine import RunEngine, call_in_bluesky_event_loop
 from databroker.v0 import Broker
 from IPython import get_ipython
+from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
@@ -35,6 +37,8 @@ nslsii.configure_base(
     epics_context=False,
 )
 
+RE.unsubscribe(0)
+
 event_loop = asyncio.get_event_loop()
 RE = RunEngine(loop=event_loop)
 RE.subscribe(bec)
@@ -42,6 +46,7 @@ RE.subscribe(bec)
 tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
 tw = TiledWriter(tiled_client)
 RE.subscribe(tw)
+# db = Broker()
 
 import json
 
@@ -70,11 +75,22 @@ bec.disable_plots()
 bec.disable_table()
 
 
+def dump_doc_to_stdout(name, doc):
+    print("========= Emitting Doc =============")
+    print(f"{name = }")
+    print(f"{doc = }")
+    print("============ Done ============")
+
+
+RE.subscribe(dump_doc_to_stdout)
+
+
 def now():
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 jlw = JSONWriter(f"/tmp/export-docs-{now()}.json")
+# RE.subscribe(jlw)
 
 
 class FileLoadingTimer:
@@ -98,7 +114,7 @@ class FileLoadingTimer:
         self.loading = False
 
 
-EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
+# EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
@@ -106,17 +122,11 @@ EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # Uncomment the following lines to turn on verbose messages for
 # debugging.
-# ophyd.logger.setLevel(logging.DEBUG)
+ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
 
-RE.md["facility"] = "NSLS-II"
-RE.md["group"] = "TST"
-RE.md["beamline_id"] = "31-ID-1"
-
-# Hard code cycle/data_session to known good values
-RE.md["cycle"] = "2024-1"
-RE.md["data_session"] = "pass-000000"
+RE.md = RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix="")
 
 
 warnings.filterwarnings("ignore")
