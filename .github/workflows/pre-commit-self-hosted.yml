@@ -32,9 +32,30 @@ jobs:
         run: |
           pre-commit run --all-files --show-diff
 
-      - name: Test IPython
+      - name: Python/IPython info
         run: |
+          which python
+          python -VV
+
           which ipython
           ipython -V
-          python -VV
-          ipython --profile=collection
+
+      - name: Test the code
+        run: |
+          # This is what IPython does internally to load the startup files:
+          command="
+          import os
+          import glob
+          ip = get_ipython()
+          startup_files = sorted(glob.glob(os.path.join(os.getcwd(), 'startup/*.py')))
+          if os.path.isfile('.ci/drop-in.py'):
+              startup_files.append('.ci/drop-in.py')
+          if not startup_files:
+              raise SystemExit(f'Cannot find any startup files in {os.getcwd()}')
+          for f in startup_files:
+              if not os.path.isfile(f):
+                  raise FileNotFoundError(f'File {f} cannot be found.')
+              print(f'Executing {f} in CI')
+              ip.parent._exec_file(f)"
+
+            ipython --profile=collection -c "$command"
