@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -l -vxeuo pipefail {0}
 
     steps:
       - uses: actions/checkout@v4
@@ -25,15 +25,16 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          set -vxeuo pipefail
           python3 -m pip install pre-commit black isort
           python3 -m pip list
 
       - name: Run pre-commit
-        run: pre-commit run --all-files --show-diff
+        run: |
+          pre-commit run --all-files --show-diff
 
       - name: Test IPython
         run: |
           which ipython
           ipython -V
           python -VV
+          ipython --profile=collection
