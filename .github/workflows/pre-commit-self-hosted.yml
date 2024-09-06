@@ -58,4 +58,4 @@ jobs:
               print(f'Executing {f} in CI')
               ip.parent._exec_file(f)"
 
-            ipython --profile=collection -c "$command"
+          ipython --profile=collection -c "$command"
