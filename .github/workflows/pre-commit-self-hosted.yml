@@ -31,3 +31,9 @@ jobs:
 
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff
+
+      - name: Test IPython
+        run: |
+          which ipython
+          ipython -V
+          python -VV
