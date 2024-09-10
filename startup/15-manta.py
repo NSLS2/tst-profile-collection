@@ -15,12 +15,14 @@ from ophyd_async.core import (
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
-    ShapeProvider,
     SignalRW,
     TriggerInfo,
     TriggerLogic,
 )
 from ophyd_async.epics.advimba import VimbaDetector
+
+manta_trigger_logic = StandardTriggerLogic()
+manta_flyer = StandardFlyer(manta_trigger_logic, [], name="manta_flyer")
 
 
 def instantiate_manta_async(manta_id):

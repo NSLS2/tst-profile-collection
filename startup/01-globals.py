@@ -11,7 +11,6 @@ from ophyd_async.core import (
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
-    ShapeProvider,
     SignalRW,
     TriggerInfo,
     TriggerLogic,
@@ -56,15 +55,11 @@ class StandardTriggerLogic(TriggerLogic[int]):
         trigger = DetectorTrigger.internal
         num_images = setup
         if isinstance(setup, StandardTriggerSetup):
-            if (
-                not setup.software_trigger
-                and self.trigger_mode == DetectorTrigger.internal
-            ):
-                trigger = DetectorTrigger.edge_trigger
+            trigger = setup.trigger_mode
             exposure = setup.exposure_time
             num_images = setup.num_frames
         return TriggerInfo(
-            num=num_images,
+            number=num_images,
             trigger=trigger,
             deadtime=0.1,
             livetime=exposure,

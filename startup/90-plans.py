@@ -111,15 +111,15 @@ COUNTS_PER_DEG = COUNTS_PER_REVOLUTION / DEG_PER_REVOLUTION
 
 
 def tomo_demo_async(
-    panda=panda3_async,
-    detector=manta1_async,
+    panda=panda1,
+    detector=manta1,
     num_images=21,
     scan_time=9,
     start_deg=0,
     exposure_time=None,
 ):
 
-    panda3_pcomp_1 = dict(panda.pcomp.children())["1"]
+    panda_pcomp1 = panda.pcomp[1]
 
     step_width_counts = COUNTS_PER_REVOLUTION / (2 * (num_images - 1))
     if int(step_width_counts) != round(step_width_counts, 5):
@@ -128,13 +128,11 @@ def tomo_demo_async(
         )
 
     step_time = scan_time / num_images
-    camera_exposure_time = step_time / 2
     if exposure_time is not None:
         if exposure_time > step_time:
             raise RuntimeError(
                 f"Your configured exposure time is longer than the step size {step_time}"
             )
-    camera_exposure_time = exposure_time
 
     panda_devices = [panda, panda_flyer]
     detector_devices = [detector, manta_flyer]
@@ -143,7 +141,13 @@ def tomo_demo_async(
     det_exp_setup = StandardTriggerSetup(
         num_frames=num_images,
         exposure_time=exposure_time,
-        software_trigger=False,
+        trigger_mode=DetectorTrigger.edge_trigger,
+    )
+
+    panda_exp_setup = StandardTriggerSetup(
+        num_frames=num_images,
+        exposure_time=exposure_time,
+        trigger_mode=DetectorTrigger.constant_gate,
     )
 
     yield from bps.mv(
@@ -163,14 +167,14 @@ def tomo_demo_async(
     print(f"Exposing camera for {width_in_counts} counts")
 
     # Set up the pcomp block
-    yield from bps.mv(panda3_pcomp_1.start, int(start_encoder))
+    yield from bps.mv(panda_pcomp1.start, int(start_encoder))
 
     # Uncomment if using gate trigger mode on camera
     # yield from bps.mv(
     #    panda3_pcomp_1.width, width_in_counts
     # )  # Width in encoder counts that the pulse will be high
-    yield from bps.mv(panda3_pcomp_1.step, step_width_counts)
-    yield from bps.mv(panda3_pcomp_1.pulses, num_images)
+    yield from bps.mv(panda_pcomp1.step, step_width_counts)
+    yield from bps.mv(panda_pcomp1.pulses, num_images)
 
     yield from bps.open_run()
 
@@ -186,17 +190,18 @@ def tomo_demo_async(
     # yield from bps.mv(manta_async.expose_out_mode, "TriggerWidth")  # "Timed" or "TriggerWidth"
 
     # Stage All!
-    yield from bps.stage_all(*detectors)
+    yield from bps.stage_all(*all_devices)
     yield from bps.mv(detector._writer.hdf.num_capture, num_images)
 
-    assert manta_flyer._trigger_logic.state == TriggerState.stopping
-
     yield from bps.prepare(manta_flyer, det_exp_setup, wait=True)
-    yield from bps.prepare(detector, manta_flyer.trigger_info(det_exp_setup), wait=True)
+    yield from bps.prepare(
+        detector, manta_flyer.trigger_logic.trigger_info(det_exp_setup), wait=True
+    )
 
-    assert panda_flyer._trigger_logic.state == TriggerState.stopping
     yield from bps.prepare(panda_flyer, num_images, wait=True)
-    yield from bps.prepare(panda, panda3_flyer.trigger_info(num_images), wait=True)
+    yield from bps.prepare(
+        panda, panda_flyer.trigger_logic.trigger_info(panda_exp_setup), wait=True
+    )
 
     yield from bps.mv(rot_motor, start_deg + DEG_PER_REVOLUTION / 2 + 5)
 
@@ -258,8 +263,8 @@ def tomo_demo_async(
     yield from bps.close_run()
 
     panda_val = yield from bps.rd(panda.data.num_captured)
-    kinetix_val = yield from bps.rd(detector._writer.hdf.num_captured)
-    print(f"{panda_val = }    {kinetix_val = }")
+    manta_val = yield from bps.rd(detector._writer.hdf.num_captured)
+    print(f"{panda_val = }    {manta_val = }")
 
     yield from bps.unstage_all(*detector_devices)
 

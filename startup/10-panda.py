@@ -40,6 +40,9 @@ from ophyd_async.fastcs.panda import HDFPanda
 #                                                                        #
 ##########################################################################
 
+panda_trigger_logic = StandardTriggerLogic()
+panda_flyer = StandardFlyer(panda_trigger_logic, [], name="panda_flyer")
+
 
 def instantiate_panda_async(panda_id):
     print(f"Connecting to PandA #{panda_id}")

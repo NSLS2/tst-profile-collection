@@ -1,5 +1,7 @@
 file_loading_timer.start_timer(__file__)
 
+from ophyd_async.core import SignalR
+
 default_trigger_logic = StandardTriggerLogic()
 default_flyer = StandardFlyer(default_trigger_logic)
 
