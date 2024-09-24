@@ -12,11 +12,13 @@ import warnings
 import epicscorelibs.path.pyepics
 import nslsii
 import ophyd.signal
+import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
 from bluesky.run_engine import RunEngine, call_in_bluesky_event_loop
 from databroker.v0 import Broker
 from IPython import get_ipython
+from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 
 ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
@@ -35,13 +37,15 @@ nslsii.configure_base(
     epics_context=False,
 )
 
-event_loop = asyncio.get_event_loop()
-RE = RunEngine(loop=event_loop)
+RE.unsubscribe(0)
+
+RE = RunEngine()
 RE.subscribe(bec)
 
 tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
 tw = TiledWriter(tiled_client)
 RE.subscribe(tw)
+# db = Broker()
 
 import json
 
@@ -63,11 +67,23 @@ class JSONWriter:
 
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
-get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")
+ipython_session = get_ipython()
+if ipython_session is not None and not isinstance(ipython_session, IPDummy):
+    ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
 
 # PandA does not produce any data for plots for now.
 bec.disable_plots()
 bec.disable_table()
+
+
+def dump_doc_to_stdout(name, doc):
+    print("========= Emitting Doc =============")
+    print(f"{name = }")
+    print(f"{doc = }")
+    print("============ Done ============")
+
+
+RE.subscribe(dump_doc_to_stdout)
 
 
 def now():
@@ -75,6 +91,7 @@ def now():
 
 
 jlw = JSONWriter(f"/tmp/export-docs-{now()}.json")
+# RE.subscribe(jlw)
 
 
 class FileLoadingTimer:
@@ -98,7 +115,7 @@ class FileLoadingTimer:
         self.loading = False
 
 
-EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
+# EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
@@ -106,17 +123,11 @@ EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # Uncomment the following lines to turn on verbose messages for
 # debugging.
-# ophyd.logger.setLevel(logging.DEBUG)
+ophyd.logger.setLevel(logging.DEBUG)
 # logging.basicConfig(level=logging.DEBUG)
 
 
-RE.md["facility"] = "NSLS-II"
-RE.md["group"] = "TST"
-RE.md["beamline_id"] = "31-ID-1"
-
-# Hard code cycle/data_session to known good values
-RE.md["cycle"] = "2024-1"
-RE.md["data_session"] = "pass-000000"
+RE.md = RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix="")
 
 
 warnings.filterwarnings("ignore")

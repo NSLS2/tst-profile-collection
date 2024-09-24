@@ -18,37 +18,44 @@ file_loading_timer.start_timer(__file__)
 import dataclasses
 import uuid
 
-from ophyd_async.core._providers import UUIDFilenameProvider, YMDPathProvider
+from ophyd_async.core import UUIDFilenameProvider, YMDPathProvider
 
 
-class ProposalNumYMDPathProvder(YMDPathProvider):
+class ProposalNumYMDPathProvider(YMDPathProvider):
 
     def __init__(
-        self, filename_provider, use_default=False, root=TST_PROPOSAL_DIR_ROOT, **kwargs
+        self,
+        filename_provider,
+        device_above_ymd=True,
+        base_directory_path=TST_PROPOSAL_DIR_ROOT,
     ):
 
-        self._use_default = use_default
-        super().__init__(filename_provider, root, **kwargs)
+        super().__init__(
+            filename_provider,
+            base_directory_path,
+            create_dir_depth=-4,
+            device_name_as_base_dir=(not device_above_ymd),
+        )
 
     def __call__(self, device_name=None):
-        # self._directory_path is /nsls2/data/hex/proposals
-        # This never changes.
-        # RE.md['cycle'] -> 2024-2
-        # RE.md['proposal'] -> 'pass-123456'
+        # proposal_assets = (
+        #     self._base_directory_path / RE.md["cycle"] / RE.md["data_session"] / "assets"
+        # )
+
+        # Hard code cycle/proposal for now
         proposal_assets = (
-            self._directory_path / RE.md["cycle"] / RE.md["data_session"] / "assets"
+            self._base_directory_path / "2024-1" / "pass-000000" / "assets"
         )
-        if not self._use_default:
-            path_info = super().__call__(device_name=device_name)
-        else:
-            path_info = super().__call__(device_name="default")
+
+        path_info = super().__call__(device_name=device_name)
 
         filename = path_info.filename
         if isinstance(self._filename_provider, ScanIDFilenameProvider):
             filename = self._filename_provider(device_name=device_name)
 
-        print(f"{path_info = }:\n  {proposal_assets = }\n  {filename = }")
-        return dataclasses.replace(path_info, root=proposal_assets, filename=filename)
+        return dataclasses.replace(
+            path_info, directory_path=proposal_assets, filename=filename
+        )
 
 
 # class ScanIDDirectoryProvider(UUIDDirectoryProvider):
@@ -76,7 +83,6 @@ class ScanIDFilenameProvider(UUIDFilenameProvider):
     def __init__(
         self,
         *args,
-        device_name=None,
         frame_type: TomoFrameType = TomoFrameType.proj,
         **kwargs,
     ):
