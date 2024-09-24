@@ -111,8 +111,8 @@ COUNTS_PER_DEG = COUNTS_PER_REVOLUTION / DEG_PER_REVOLUTION
 
 
 def tomo_demo_async(
-    panda=panda1,
-    detector=manta1,
+    panda,
+    detector,
     num_images=21,
     scan_time=9,
     start_deg=0,

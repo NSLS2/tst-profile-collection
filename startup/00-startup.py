@@ -39,8 +39,7 @@ nslsii.configure_base(
 
 RE.unsubscribe(0)
 
-event_loop = asyncio.get_event_loop()
-RE = RunEngine(loop=event_loop)
+RE = RunEngine()
 RE.subscribe(bec)
 
 tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
@@ -68,7 +67,9 @@ class JSONWriter:
 
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
-get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")
+ipython_session = get_ipython()
+if ipython_session is not None and not isinstance(ipython_session, IPDummy):
+    ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
 
 # PandA does not produce any data for plots for now.
 bec.disable_plots()

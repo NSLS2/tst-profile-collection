@@ -1,4 +1,4 @@
-def inner_manta_collect(manta_detector, flyer):
+def inner_manta_collect(manta_detector: VimbaDetector, flyer: StandardFlyer):
 
     yield from bps.kickoff(flyer)
     yield from bps.kickoff(manta_detector)

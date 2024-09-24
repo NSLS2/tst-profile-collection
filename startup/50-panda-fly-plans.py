@@ -14,16 +14,18 @@ from event_model import compose_resource
 from ophyd.status import SubscriptionStatus
 
 
-def panda_fly(panda, flyer=default_flyer, num=724):
-    yield from bps.stage_all(panda, flyer)
-    yield from bps.prepare(flyer, num, wait=True)
-    yield from bps.prepare(panda, flyer.trigger_logic.trigger_info(num), wait=True)
+def panda_fly(panda, num=724):
+    yield from bps.stage_all(panda, default_flyer)
+    yield from bps.prepare(default_flyer, num, wait=True)
+    yield from bps.prepare(
+        panda, default_flyer.trigger_logic.trigger_info(num), wait=True
+    )
 
     yield from bps.open_run()
 
-    yield from bps.kickoff_all([panda, flyer])
+    yield from bps.kickoff_all([panda, default_flyer])
 
-    yield from bps.complete_all([panda, flyer], wait=True, group="complete")
+    yield from bps.complete_all([panda, default_flyer], wait=True, group="complete")
 
     # Manually incremenet the index as if a frame was taken
     # detector.writer.index += 1
@@ -48,4 +50,4 @@ def panda_fly(panda, flyer=default_flyer, num=724):
     print(f"{val = }")
     yield from bps.close_run()
 
-    yield from bps.unstage_all(panda, flyer)
+    yield from bps.unstage_all(panda, default_flyer)
