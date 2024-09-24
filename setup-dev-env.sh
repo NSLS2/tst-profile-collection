@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-declare -a REPOS=("ophyd-async" "bluesky" "event-model" "tiled" "nslsii")
+declare -a REPOS=("ophyd-async" "bluesky" "event-model" "tiled" "nslsii", "bluesky-queueserver", "bluesky-widgets", "bluesky-queueserver-api")
 
 rm -rf venv overlays
 
@@ -22,4 +22,4 @@ pip install -e .[dev]
 cd ..
 done
 
-conda deactivate
+deactivate
