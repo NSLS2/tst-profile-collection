@@ -98,7 +98,7 @@ class FileLoadingTimer:
         self.loading = False
 
 
-EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
+# EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
 
 # At the end of every run, verify that files were saved and
 # print a confirmation message.
