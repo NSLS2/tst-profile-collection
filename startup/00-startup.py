@@ -63,7 +63,7 @@ class JSONWriter:
 
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
-get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")
+# get_ipython().run_line_magic("autoawait", "call_in_bluesky_event_loop")
 
 # PandA does not produce any data for plots for now.
 bec.disable_plots()
