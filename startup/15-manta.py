@@ -11,18 +11,17 @@ from enum import Enum
 from ophyd import EpicsSignalRO
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
-    DetectorControl,
+    DetectorController,
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
     SignalRW,
     TriggerInfo,
-    TriggerLogic,
 )
 from ophyd_async.epics.advimba import VimbaDetector
 
 manta_trigger_logic = StandardTriggerLogic()
-manta_flyer = StandardFlyer(manta_trigger_logic, [], name="manta_flyer")
+manta_flyer = StandardFlyer(manta_trigger_logic, name="manta_flyer")
 
 
 def instantiate_manta_async(manta_id):
@@ -41,6 +40,8 @@ def instantiate_manta_async(manta_id):
 
 manta1 = instantiate_manta_async(1)
 manta2 = instantiate_manta_async(2)
+
+# warmup_hdf_plugins([manta1, manta2])
 
 
 file_loading_timer.stop_timer(__file__)

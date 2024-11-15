@@ -30,17 +30,17 @@ ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
 nslsii.configure_base(
     get_ipython().user_ns,
     Broker.named("temp"),
-    pbar=True,
-    bec=True,
-    magics=True,
-    mpl=True,
+    pbar=False,
+    bec=False,
+    magics=False,
+    mpl=False,
     epics_context=False,
 )
 
 RE.unsubscribe(0)
 
 RE = RunEngine()
-RE.subscribe(bec)
+#RE.subscribe(bec)
 
 tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
 tw = TiledWriter(tiled_client)
@@ -68,12 +68,12 @@ class JSONWriter:
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
 ipython_session = get_ipython()
-if ipython_session is not None and not isinstance(ipython_session, IPDummy):
-    ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
+#if ipython_session is not None and not isinstance(ipython_session, IPDummy):
+#ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
 
 # PandA does not produce any data for plots for now.
-bec.disable_plots()
-bec.disable_table()
+#bec.disable_plots()
+#bec.disable_table()
 
 
 def dump_doc_to_stdout(name, doc):

@@ -19,7 +19,7 @@ from ophyd import Device, EpicsMotor, EpicsPathSignal, EpicsSignal, EpicsSignalW
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
     AsyncStatus,
-    DetectorControl,
+    DetectorController,
     DetectorTrigger,
     DetectorWriter,
     SignalRW,
@@ -41,7 +41,7 @@ from ophyd_async.fastcs.panda import HDFPanda
 ##########################################################################
 
 panda_trigger_logic = StandardTriggerLogic()
-panda_flyer = StandardFlyer(panda_trigger_logic, [], name="panda_flyer")
+panda_flyer = StandardFlyer(panda_trigger_logic, name="panda_flyer")
 
 
 def instantiate_panda_async(panda_id):

@@ -7,13 +7,13 @@ from enum import Enum
 
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
-    DetectorControl,
+    DetectorController,
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
     SignalRW,
     TriggerInfo,
-    TriggerLogic,
+    FlyerController,
 )
 
 
@@ -46,7 +46,7 @@ def gen_software_trigger_setup(num_frames, exp_time):
     )
 
 
-class StandardTriggerLogic(TriggerLogic[int]):
+class StandardTriggerLogic(FlyerController[int]):
     def __init__(self):
         self.state = StandardTriggerState.null
 
@@ -59,7 +59,7 @@ class StandardTriggerLogic(TriggerLogic[int]):
             exposure = setup.exposure_time
             num_images = setup.num_frames
         return TriggerInfo(
-            number=num_images,
+            number_of_triggers=num_images,
             trigger=trigger,
             deadtime=0.1,
             livetime=exposure,
