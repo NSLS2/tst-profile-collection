@@ -1,4 +1,4 @@
-name: pre-commit
+name: pre-commit-self-hosted
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -l -vxeo pipefail {0}
 
     steps:
       - uses: actions/checkout@v4
@@ -25,9 +25,39 @@ jobs:
 
       - name: Install dev dependencies
         run: |
-          set -vxeuo pipefail
           python3 -m pip install pre-commit black isort
           python3 -m pip list
 
       - name: Run pre-commit
-        run: pre-commit run --all-files --show-diff
+        run: |
+          pre-commit run --all-files --show-diff
+
+      - name: Python/IPython info
+        run: |
+          which python
+          python -VV
+
+          which ipython
+          ipython -V
+
+      - name: Test the code
+        run: |
+          cd ~/.ipython/profile_collection/
+
+          # This is what IPython does internally to load the startup files:
+          command="
+          import os
+          import glob
+          ip = get_ipython()
+          startup_files = sorted(glob.glob(os.path.join(os.getcwd(), 'startup/*.py')))
+          if os.path.isfile('.ci/drop-in.py'):
+              startup_files.append('.ci/drop-in.py')
+          if not startup_files:
+              raise SystemExit(f'Cannot find any startup files in {os.getcwd()}')
+          for f in startup_files:
+              if not os.path.isfile(f):
+                  raise FileNotFoundError(f'File {f} cannot be found.')
+              print(f'Executing {f} in CI')
+              ip.parent._exec_file(f)"
+
+          ipython --profile=test -c "$command"
