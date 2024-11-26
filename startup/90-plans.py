@@ -272,17 +272,18 @@ def tomo_demo_async(
     # Reset the velocity back to high.
     yield from bps.mv(rot_motor.velocity, 180 / 2)
 
+
 def xas_demo_async(
     panda,
     detector,
     npoints,
     total_time,
     start_e,
-    end_e
-#    num_images=21,
-#    scan_time=9,
-#    start_deg=0,
-#    exposure_time=None,
+    end_e,
+    #    num_images=21,
+    #    scan_time=9,
+    #    start_deg=0,
+    #    exposure_time=None,
 ):
 
     start_deg = start_e
@@ -293,23 +294,20 @@ def xas_demo_async(
     panda_clock1 = panda.clock[1]
 
     reset_time = 0.001  # [ms], 1 us difference is usually enough
-    
+
     clock_period_ms = total_time * 1000 / npoints  # [ms]
-    clock_width_ms = clock_period_ms - reset_time 
-    
-    target_velocity = (end_deg-start_deg) / total_time  # [deg/s]
-    
+    clock_width_ms = clock_period_ms - reset_time
+
+    target_velocity = (end_deg - start_deg) / total_time  # [deg/s]
 
     # PRE_START -> 0
     # START     -> prestart_cnt
     # WIDTH     -> end_cnt - start_cnt
 
-
-
-    pre_start_deg = 5.  # [deg], we are working in relative mode, zero is the position where pcomp was enabled
+    pre_start_deg = 5.0  # [deg], we are working in relative mode, zero is the position where pcomp was enabled
     pre_start_cnt = pre_start_deg * COUNTS_PER_DEG
 
-    start_cnt = pre_start_cnt 
+    start_cnt = pre_start_cnt
     width_deg = end_deg - start_deg
     width_cnt = width_deg * COUNTS_PER_DEG
 
@@ -317,16 +315,16 @@ def xas_demo_async(
 
     # step_width_counts = COUNTS_PER_REVOLUTION / (2 * (num_images - 1))
     # if int(step_width_counts) != round(step_width_counts, 5):
-        # raise ValueError(
-            # "The number of encoder counts per pulse is not an integer value!"
-        # )
+    # raise ValueError(
+    # "The number of encoder counts per pulse is not an integer value!"
+    # )
 
-#    step_time = scan_time / num_images
-#    if exposure_time is not None:
-#        if exposure_time > step_time:
-#            raise RuntimeError(
-#                f"Your configured exposure time is longer than the step size {step_time}"
-#            )
+    #    step_time = scan_time / num_images
+    #    if exposure_time is not None:
+    #        if exposure_time > step_time:
+    #            raise RuntimeError(
+    #                f"Your configured exposure time is longer than the step size {step_time}"
+    #            )
 
     panda_devices = [panda, panda_flyer]
     all_devices = panda_devices
@@ -336,14 +334,14 @@ def xas_demo_async(
         all_devices = panda_devices + detector_devices
     # TODO: DO WE NEED THIS?
     det_exp_setup = StandardTriggerSetup(
-        num_frames=npoints, #num_images,
-        exposure_time=clock_width_ms, #exposure_time,
+        num_frames=npoints,  # num_images,
+        exposure_time=clock_width_ms,  # exposure_time,
         trigger_mode=DetectorTrigger.edge_trigger,
     )
 
     panda_exp_setup = StandardTriggerSetup(
-        num_frames=npoints, #num_images,
-        exposure_time=clock_width_ms, #exposure_time,
+        num_frames=npoints,  # num_images,
+        exposure_time=clock_width_ms,  # exposure_time,
         trigger_mode=DetectorTrigger.constant_gate,
     )
 
@@ -352,18 +350,20 @@ def xas_demo_async(
     )  # Make it fast to move to the start position
     yield from bps.mv(rot_motor, start_deg - pre_start_deg)
     yield from bps.mv(
-        rot_motor.velocity, target_velocity #180 / scan_time
+        rot_motor.velocity, target_velocity  # 180 / scan_time
     )  # Set the velocity for the scan
     # start_encoder = start_deg * COUNTS_PER_DEG
 
     # width_in_counts = (180 / scan_time) * COUNTS_PER_DEG * exposure_time
     # if width_in_counts > step_width_counts:
-        # raise RuntimeError(
-            # f"Your specified exposure time of {exposure_time}s is too long! Calculated width: {width_in_counts}, Step size: {step_width_counts}"
-        # )
+    # raise RuntimeError(
+    # f"Your specified exposure time of {exposure_time}s is too long! Calculated width: {width_in_counts}, Step size: {step_width_counts}"
+    # )
     # print(f"Exposing camera for {width_in_counts} counts")
 
-    yield from bps.mv(panda_pcomp1.enable, "ZERO")  # disabling pcomp, we'll enable it right before the start
+    yield from bps.mv(
+        panda_pcomp1.enable, "ZERO"
+    )  # disabling pcomp, we'll enable it right before the start
 
     # print("SEETING UP PCOMP")
 
@@ -381,7 +381,7 @@ def xas_demo_async(
     # )  # Width in encoder counts that the pulse will be high
     # yield from bps.mv(panda_pcomp1.step, step_width_counts)
     # yield from bps.mv(panda_pcomp1.pulses, num_images)  # TODO: CHECK
-    
+
     yield from bps.mv(panda_clock1.period, clock_period_ms)
     yield from bps.mv(panda_clock1.period_units, "ms")
     yield from bps.mv(panda_clock1.width, clock_width_ms)
@@ -410,12 +410,18 @@ def xas_demo_async(
         yield from bps.prepare(
             detector, manta_flyer.trigger_logic.trigger_info(det_exp_setup), wait=True
         )
-        print("004: manta flyer prepare complete, ", datetime.datetime.now().strftime("%H:%M:%S"))
+        print(
+            "004: manta flyer prepare complete, ",
+            datetime.datetime.now().strftime("%H:%M:%S"),
+        )
     yield from bps.prepare(panda_flyer, npoints, wait=True)
     yield from bps.prepare(
         panda, panda_flyer.trigger_logic.trigger_info(panda_exp_setup), wait=True
     )
-    print("005: panda flyer prepare complete, ", datetime.datetime.now().strftime("%H:%M:%S"))
+    print(
+        "005: panda flyer prepare complete, ",
+        datetime.datetime.now().strftime("%H:%M:%S"),
+    )
 
     for device in all_devices:
         yield from bps.kickoff(device)
@@ -423,9 +429,10 @@ def xas_demo_async(
 
     # yield from bps.sleep(0.1)
     yield from bps.mv(panda_pcomp1.enable, "ONE")
-    yield from bps.mv(rot_motor, end_deg + pre_start_deg)  # Aiming beyond the end point to maintain constant veolcity
+    yield from bps.mv(
+        rot_motor, end_deg + pre_start_deg
+    )  # Aiming beyond the end point to maintain constant veolcity
     print("006: motor mv start, ", datetime.datetime.now().strftime("%H:%M:%S"))
-
 
     for flyer_or_panda in panda_devices:
         yield from bps.complete(flyer_or_panda, wait=True, group="complete_panda")
@@ -497,4 +504,4 @@ def xas_demo_async(
     yield from bps.mv(rot_motor.velocity, 180 / 2)
 
 
-#file_loading_timer.stop_timer(__file__)
+# file_loading_timer.stop_timer(__file__)

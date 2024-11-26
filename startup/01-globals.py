@@ -11,9 +11,9 @@ from ophyd_async.core import (
     DetectorTrigger,
     DetectorWriter,
     DeviceCollector,
+    FlyerController,
     SignalRW,
     TriggerInfo,
-    FlyerController,
 )
 
 
