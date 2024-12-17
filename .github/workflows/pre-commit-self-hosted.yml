@@ -31,7 +31,7 @@ jobs:
       - name: Run pre-commit
         run: |
           pre-commit run --all-files --show-diff
-  
+
   testing:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
 
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-python@v5
 
 
-     - name: Python/IPython info
+      - name: Python/IPython info
         run: |
           which python
           python -VV
