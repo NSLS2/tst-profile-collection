@@ -60,7 +60,8 @@ jobs:
 
       - name: Test the code
         run: |
-          cd ~/.ipython/profile_collection/
+          #cd ~/.ipython/profile_collection/
+          cd /home/xf31id/test_fly/profile_collection/
 
           # This is what IPython does internally to load the startup files:
           command="
