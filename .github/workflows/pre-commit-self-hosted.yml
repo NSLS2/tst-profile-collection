@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
     defaults:
       run:
-        shell: bash -l -vxeo pipefail {0}
+        shell: bash -l -eo pipefail {0}
 
     steps:
       - uses: actions/checkout@v4
