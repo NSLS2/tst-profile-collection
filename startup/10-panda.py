@@ -58,8 +58,10 @@ def instantiate_panda_async(panda_id):
 
     return panda_async
 
-
-panda1 = instantiate_panda_async(1)
+try:
+    panda1 = instantiate_panda_async(1)
+except Exception as e:
+    print(f"Error: {e}")
 
 
 file_loading_timer.stop_timer(__file__)
