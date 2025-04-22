@@ -8,6 +8,10 @@ DEG_PER_REVOLUTION = 360
 COUNTS_PER_DEG = COUNTS_PER_REVOLUTION / DEG_PER_REVOLUTION
 
 
+from ophyd_async.core import TriggerInfo
+from ophyd_async.epics.motor import FlyMotorInfo
+
+
 def tomo_demo_async(
     detectors,
     panda,
@@ -34,27 +38,29 @@ def tomo_demo_async(
     else:
         exposure_time = step_time / 3
 
-    all_devices = [*detectors, panda]
+    all_detectors = [*detectors, panda]
+    all_devices = [*all_detectors, rot_motor]
 
     det_trigger_info = TriggerInfo(
-        num_frames=num_images,
-        exposure_time=exposure_time,
-        trigger_mode=DetectorTrigger.edge_trigger,
+        number_of_triggers=num_images,
+        livetime=exposure_time,
+        deadtime=0.001,
+        trigger=DetectorTrigger.EDGE_TRIGGER,
     )
 
     panda_trigger_info = TriggerInfo(
-        num_frames=num_images,
-        exposure_time=exposure_time,
-        trigger_mode=DetectorTrigger.constant_gate,
+        number_of_triggers=num_images,
+        livetime=exposure_time,
+        deadtime=0.001,
+        trigger=DetectorTrigger.CONSTANT_GATE,
     )
 
-    yield from bps.mv(
-        rot_motor.velocity, 180 / 2
-    )  # Make it fast to move to the start position
-    yield from bps.mv(rot_motor, start_deg - 20)
-    yield from bps.mv(
-        rot_motor.velocity, 180 / scan_time
-    )  # Set the velocity for the scan
+    rot_motor_fly_info = FlyMotorInfo(
+        start_position=start_deg - 5,
+        end_position=start_deg + DEG_PER_REVOLUTION / 2 + 5,
+        time_for_move=scan_time,
+    )
+
     start_encoder = start_deg * COUNTS_PER_DEG
 
     width_in_counts = (180 / scan_time) * COUNTS_PER_DEG * exposure_time
@@ -76,10 +82,6 @@ def tomo_demo_async(
 
     yield from bps.open_run()
 
-    detector._writer._path_provider._filename_provider.set_frame_type(
-        TomoFrameType.proj
-    )
-
     # The setup below is happening in the VimbaController's arm method.
     # # Setup camera in trigger mode
     # yield from bps.mv(manta_async.trigger_mode, "On")
@@ -90,80 +92,32 @@ def tomo_demo_async(
     # Stage All!
     yield from bps.stage_all(*all_devices)
 
-    yield from bps.prepare(manta_flyer, det_exp_setup, wait=True)
+    for det in detectors:
+        yield from bps.prepare(det, det_trigger_info, group="prepare_all", wait=False)
+
+    yield from bps.prepare(panda, panda_trigger_info, group="prepare_all", wait=False)
+
     yield from bps.prepare(
-        detector, manta_flyer.trigger_logic.trigger_info(det_exp_setup), wait=True
+        rot_motor, rot_motor_fly_info, group="prepare_all", wait=False
     )
 
-    yield from bps.prepare(panda_flyer, num_images, wait=True)
-    yield from bps.prepare(
-        panda, panda_flyer.trigger_logic.trigger_info(panda_exp_setup), wait=True
+    yield from bps.wait(group="prepare_all")
+    yield from bps.kickoff_all(*all_devices, wait=True)
+
+    yield from bps.declare_stream(*all_detectors, name="tomo_stream")
+    yield from bps.collect_while_completing(
+        all_devices, all_detectors, flush_period=0.25, stream_name="tomo_stream"
     )
 
-    yield from bps.mv(rot_motor, start_deg + DEG_PER_REVOLUTION / 2 + 5)
-
-    for device in all_devices:
-        yield from bps.kickoff(device)
-
-    for flyer_or_panda in panda_devices:
-        yield from bps.complete(flyer_or_panda, wait=True, group="complete_panda")
-
-    for flyer_or_det in detector_devices:
-        yield from bps.complete(flyer_or_det, wait=True, group="complete_detector")
-
-    # Manually incremenet the index as if a frame was taken
-    # detector.writer.index += 1
-
-    # Wait for completion of the PandA HDF5 file saving.
-    done = False
-    while not done:
-        try:
-            yield from bps.wait(group="complete_panda", timeout=0.5)
-        except TimeoutError:
-            pass
-        else:
-            done = True
-
-        panda_stream_name = f"{panda.name}_stream"
-        yield from bps.declare_stream(panda, name=panda_stream_name)
-
-        yield from bps.collect(
-            panda,
-            # stream=True,
-            # return_payload=False,
-            name=panda_stream_name,
-        )
-
-    yield from bps.unstage_all(*panda_devices)
-
-    # Wait for completion of the AD HDF5 file saving.
-    done = False
-    while not done:
-        try:
-            yield from bps.wait(group="complete_detector", timeout=0.5)
-        except TimeoutError:
-            pass
-        else:
-            done = True
-
-        detector_stream_name = f"{detector.name}_stream"
-        yield from bps.declare_stream(detector, name=detector_stream_name)
-
-        yield from bps.collect(
-            detector,
-            # stream=True,
-            # return_payload=False,
-            name=detector_stream_name,
-        )
-        yield from bps.sleep(0.01)
+    yield from bps.unstage_all(*all_devices)
 
     yield from bps.close_run()
 
     panda_val = yield from bps.rd(panda.data.num_captured)
-    manta_val = yield from bps.rd(detector._writer.hdf.num_captured)
-    print(f"{panda_val = }    {manta_val = }")
-
-    yield from bps.unstage_all(*detector_devices)
+    print(f"{panda_val = } ")
+    for det in detectors:
+        manta_val = yield from bps.rd(det.fileio.num_captured)
+        print(f"{det.name} = {manta_val} ")
 
     # Reset the velocity back to high.
     yield from bps.mv(rot_motor.velocity, 180 / 2)
