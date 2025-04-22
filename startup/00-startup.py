@@ -17,29 +17,21 @@ import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
 from bluesky.run_engine import RunEngine, autoawait_in_bluesky_event_loop
+from bluesky_queueserver import is_re_worker_active
 from IPython import get_ipython
 from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 from tiled.server import SimpleTiledServer
 
 RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
-autoawait_in_bluesky_event_loop()
+if is_re_worker_active():
+    autoawait_in_bluesky_event_loop()
 
 
 tiled_server = SimpleTiledServer()
 tiled_client = from_uri(tiled_server.uri)
 tiled_writer = TiledWriter(tiled_client)
 RE.subscribe(tiled_writer)
-
-
-# This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
-ipython_session = get_ipython()
-# if ipython_session is not None and not isinstance(ipython_session, IPDummy):
-# ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
-
-# PandA does not produce any data for plots for now.
-# bec.disable_plots()
-# bec.disable_table()
 
 
 def dump_doc_to_stdout(name, doc):
