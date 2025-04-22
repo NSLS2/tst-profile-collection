@@ -9,71 +9,37 @@ import subprocess
 import time as ttime
 import warnings
 
+import bluesky.plan_stubs as bps
+import bluesky.plans as bp
 import epicscorelibs.path.pyepics
 import nslsii
-import ophyd.signal
 import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
-from bluesky.run_engine import RunEngine, call_in_bluesky_event_loop
-from databroker.v0 import Broker
+from bluesky.run_engine import RunEngine, autoawait_in_bluesky_event_loop
 from IPython import get_ipython
 from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
+from tiled.server import SimpleTiledServer
 
-ophyd.signal.EpicsSignal.set_defaults(connection_timeout=5)
-# See docstring for nslsii.configure_base() for more details
-# this command takes away much of the boilerplate for setting up a profile
-# (such as setting up best-effort callback, etc)
-
-
-nslsii.configure_base(
-    get_ipython().user_ns,
-    Broker.named("temp"),
-    pbar=False,
-    bec=False,
-    magics=False,
-    mpl=False,
-    epics_context=False,
-)
-
-RE.unsubscribe(0)
-
-RE = RunEngine()
-#RE.subscribe(bec)
-
-tiled_client = from_uri("http://localhost:8000", api_key=os.getenv("TILED_API_KEY", ""))
-tw = TiledWriter(tiled_client)
-RE.subscribe(tw)
-# db = Broker()
-
-import json
+RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
+autoawait_in_bluesky_event_loop()
 
 
-class JSONWriter:
-    """Writer for a JSON array"""
-
-    def __init__(self, filepath):
-        self.file = open(filepath, "w")
-        self.file.write("[\n")
-
-    def __call__(self, name, doc):
-        json.dump({"name": name, "doc": doc}, self.file, default=str)
-        if name == "stop":
-            self.file.write("\n]")
-            self.file.close()
-        else:
-            self.file.write(",\n")
+tiled_server = SimpleTiledServer()
+tiled_client = from_uri(tiled_server.uri)
+tiled_writer = TiledWriter(tiled_client)
+RE.subscribe(tiled_writer)
 
 
 # This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
 ipython_session = get_ipython()
-#if ipython_session is not None and not isinstance(ipython_session, IPDummy):
-#ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
+# if ipython_session is not None and not isinstance(ipython_session, IPDummy):
+# ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
 
 # PandA does not produce any data for plots for now.
-#bec.disable_plots()
-#bec.disable_table()
+# bec.disable_plots()
+# bec.disable_table()
 
 
 def dump_doc_to_stdout(name, doc):
@@ -88,10 +54,6 @@ RE.subscribe(dump_doc_to_stdout)
 
 def now():
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
-jlw = JSONWriter(f"/tmp/export-docs-{now()}.json")
-# RE.subscribe(jlw)
 
 
 class FileLoadingTimer:
@@ -113,21 +75,6 @@ class FileLoadingTimer:
         elapsed = ttime.time() - self.start_time
         print(f"Done loading {filename} in {elapsed} seconds.")
         self.loading = False
-
-
-# EpicsSignalBase.set_defaults(timeout=10, connection_timeout=10)
-
-# At the end of every run, verify that files were saved and
-# print a confirmation message.
-# RE.subscribe(post_run(verify_files_saved, db), 'stop')
-
-# Uncomment the following lines to turn on verbose messages for
-# debugging.
-ophyd.logger.setLevel(logging.DEBUG)
-# logging.basicConfig(level=logging.DEBUG)
-
-
-RE.md = RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix="")
 
 
 warnings.filterwarnings("ignore")
@@ -170,5 +117,9 @@ def show_env():
 
 TST_PROPOSAL_DIR_ROOT = "/nsls2/data/tst/legacy/mock-proposals"
 
+RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES"
+
+if RUNNING_IN_NSLS2_CI:
+    print("Running in CI, using mock mode when initializing devices...")
 
 file_loading_timer = FileLoadingTimer()

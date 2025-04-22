@@ -13,9 +13,6 @@ import bluesky.plan_stubs as bps
 import bluesky.preprocessors as bpp
 from bluesky import RunEngine
 from bluesky.utils import ProgressBarManager
-from epics import caget, caput
-from ophyd import Component as Cpt
-from ophyd import Device, EpicsMotor, EpicsPathSignal, EpicsSignal, EpicsSignalWithRBV
 from ophyd_async.core import (
     DEFAULT_TIMEOUT,
     AsyncStatus,
@@ -24,7 +21,6 @@ from ophyd_async.core import (
     DetectorWriter,
     SignalRW,
     StandardDetector,
-    StandardFlyer,
 )
 from ophyd_async.fastcs.panda import HDFPanda
 
@@ -40,23 +36,17 @@ from ophyd_async.fastcs.panda import HDFPanda
 #                                                                        #
 ##########################################################################
 
-panda_trigger_logic = StandardTriggerLogic()
-panda_flyer = StandardFlyer(panda_trigger_logic, name="panda_flyer")
-
 
 def instantiate_panda_async(panda_id):
     print(f"Connecting to PandA #{panda_id}")
-
-    with DeviceCollector():
-        panda_path_provider = ProposalNumYMDPathProvider(default_filename_provider)
-        panda_async = HDFPanda(
+    with init_devices(mock=RUNNING_IN_NSLS2_CI):
+        panda = HDFPanda(
             f"XF:31ID1-ES{{PANDA:{panda_id}}}:",
-            panda_path_provider,
-            name=f"panda{panda_id}_async",
+            TSTPathProvider(RE.md),
+            name=f"panda{panda_id}",
         )
-        # print_children(panda_async)
-
-    return panda_async
+    print("Done")
+    return panda
 
 
 panda1 = instantiate_panda_async(1)
