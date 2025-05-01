@@ -24,7 +24,7 @@ from tiled.client import from_uri
 from tiled.server import SimpleTiledServer
 
 RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
-if is_re_worker_active():
+if not is_re_worker_active():
     autoawait_in_bluesky_event_loop()
 
 
