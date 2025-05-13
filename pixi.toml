@@ -1,7 +1,7 @@
 [project]
 channels = ["conda-forge"]
-description = "Beamline profile for "
-name = "BMM-profile-collection-CAPS"
+description = "Beamline profile for xf31id1"
+name = "TST-profile-collection"
 platforms = ["linux-64"]
 version = "0.1.0"
 
