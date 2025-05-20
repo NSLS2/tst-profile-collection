@@ -23,7 +23,13 @@ from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 from tiled.server import SimpleTiledServer
 
-RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
+debug = True
+
+if debug:
+    RE = RunEngine()
+else:
+    RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
+
 if not is_re_worker_active():
     autoawait_in_bluesky_event_loop()
 
@@ -109,7 +115,7 @@ def show_env():
 
 TST_PROPOSAL_DIR_ROOT = "/nsls2/data/tst/legacy/mock-proposals"
 
-RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES"
+RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES" or debug
 
 if RUNNING_IN_NSLS2_CI:
     print("Running in CI, using mock mode when initializing devices...")
