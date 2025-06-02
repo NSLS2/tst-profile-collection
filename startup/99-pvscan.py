@@ -82,6 +82,7 @@ def walk_signals(
 #     for device in devices
 # }
 
+
 # This is a dictionary that maps all of the PVs in the profile to their types.
 def get_pv_types():
     devices = [g for g in globals().values() if isinstance(g, Device)]
@@ -101,6 +102,3 @@ def get_pv_types():
 
 # Print out the PVs with their types.
 # pprint.pprint(pv_types)
-
-
-
