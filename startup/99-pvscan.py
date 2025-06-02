@@ -2,12 +2,24 @@ print(f"Loading file {__file__!r} ...")
 
 from ophyd_async.core import Device, Signal, SignalRW
 from typing import Dict, Optional, Any
+from enum import Enum
 import pprint
 
 devices = [g for g in globals().values() if isinstance(g, Device)]
-# TODO make a dict for stray signals
-# Tuples of the source and type to capture the dtype which is presently missing
-# from our PV list
+
+
+def enum_to_dict(enum_class):
+    """Convert enum to dictionary format"""
+    members = {}
+
+    for member in enum_class:
+        value_type = type(member.value).__name__
+        members[member.name] = value_type
+
+    return {
+        "enum_name": enum_class.__name__,
+        "members": members,
+    }
 
 
 def walk_signals(
@@ -53,28 +65,33 @@ def walk_signals(
     return signals
 
 
-pvs = {
-    device.name: {
-        signal.name: signal.source
-        for signal in walk_signals(device).values()
-        if isinstance(signal, Signal)
-    }
-    for device in devices
-}
+# This is a dictionary that maps the Signals in the profile to their types and pvs.
+# pvs = {
+#     device.name: {
+#         signal.name: {
+#             "pv": signal.source,
+#             "type": (
+#                 enum_to_dict(signal._connector.backend.datatype)
+#                 if issubclass(signal._connector.backend.datatype, Enum)
+#                 else signal._connector.backend.datatype.__name__
+#             ),
+#         }
+#         for signal in walk_signals(device).values()
+#         if isinstance(signal, Signal)
+#     }
+#     for device in devices
+# }
 
-pvs2 = {
-    f"{device.name}.{signal.name}": signal.source
+# This is a dictionary that maps all of the PVs in the profile to their types.
+pv_types = {
+    signal.source: (
+        enum_to_dict(signal._connector.backend.datatype)
+        if issubclass(signal._connector.backend.datatype, Enum)
+        else signal._connector.backend.datatype.__name__
+    )
     for device in devices
     for signal in walk_signals(device).values()
 }
 
-pprint.pprint(pvs2)
-
-# pvs = {
-#     device.name: {
-#         signal[0]: signal[1].source
-#         for signal in device.children()
-#         if isinstance(signal[1], Signal)
-#     }
-#     for device in devices
-# }
+# Print out the PVs with their types.
+# pprint.pprint(pv_types)
