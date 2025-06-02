@@ -45,6 +45,7 @@ pyside6 = "*"
 
 [feature.terminal.tasks]
 bsui = "ipython --profile-dir=."
+pvs = "ipython --profile-dir=. -c 'get_pv_types()'"
 
 
 [environments]

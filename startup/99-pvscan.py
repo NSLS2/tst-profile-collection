@@ -3,9 +3,9 @@ print(f"Loading file {__file__!r} ...")
 from ophyd_async.core import Device, Signal, SignalRW
 from typing import Dict, Optional, Any
 from enum import Enum
-import pprint
+import json
 
-devices = [g for g in globals().values() if isinstance(g, Device)]
+# import pprint
 
 
 def enum_to_dict(enum_class):
@@ -83,15 +83,24 @@ def walk_signals(
 # }
 
 # This is a dictionary that maps all of the PVs in the profile to their types.
-pv_types = {
-    signal.source: (
-        enum_to_dict(signal._connector.backend.datatype)
-        if issubclass(signal._connector.backend.datatype, Enum)
-        else signal._connector.backend.datatype.__name__
-    )
-    for device in devices
-    for signal in walk_signals(device).values()
-}
+def get_pv_types():
+    devices = [g for g in globals().values() if isinstance(g, Device)]
+    pv_types = {
+        signal.source: (
+            enum_to_dict(signal._connector.backend.datatype)
+            if issubclass(signal._connector.backend.datatype, Enum)
+            else signal._connector.backend.datatype.__name__
+        )
+        for device in devices
+        for signal in walk_signals(device).values()
+    }
+    with open("pv_types.json", "w") as f:
+        json.dump(pv_types, f)
+    return pv_types
+
 
 # Print out the PVs with their types.
 # pprint.pprint(pv_types)
+
+
+
