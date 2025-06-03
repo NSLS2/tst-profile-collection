@@ -136,3 +136,6 @@ dmypy.json
 # IPython service files:
 db/
 history*.sqlite
+
+
+pv_types.json

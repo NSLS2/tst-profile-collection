@@ -11,6 +11,8 @@ libc = "2.17"
 
 
 [feature.profile.dependencies]
+black = "*"
+pre-commit = ">=4.2.0,<5"
 ophyd = "*"
 pyepics = "*"
 ipython = "*"
@@ -45,7 +47,9 @@ pyside6 = "*"
 
 [feature.terminal.tasks]
 bsui = "ipython --profile-dir=."
-
+pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
+black = "black ."
+pre-commit = "pre-commit run --all-files"
 
 [environments]
 bsui = {features=["profile", "terminal"], solve-group="profile"}
