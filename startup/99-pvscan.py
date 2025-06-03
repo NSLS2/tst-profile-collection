@@ -1,9 +1,10 @@
 print(f"Loading file {__file__!r} ...")
 
-from ophyd_async.core import Device, Signal
-from typing import Dict, Optional, Any
-from enum import Enum
 import json
+from enum import Enum
+from typing import Any, Dict, Optional
+
+from ophyd_async.core import Device, Signal
 
 
 def enum_to_dict(enum_class):
@@ -67,7 +68,7 @@ def get_signal_pv_types():
     """
     This is a dictionary that maps the Devices and Signals in the profile to their pvs and types.
     """
-    
+
     devices = [g for g in globals().values() if isinstance(g, Device)]
     pvs = {
         device.name: {
@@ -91,7 +92,7 @@ def get_pv_types():
     """
     This is a dictionary that maps all of the PVs in the profile to their types.
     """
-    
+
     devices = [g for g in globals().values() if isinstance(g, Device)]
     pv_types = {
         signal.source: (
@@ -105,4 +106,3 @@ def get_pv_types():
     with open("pv_types.json", "w") as f:
         json.dump(pv_types, f)
     return pv_types
-
