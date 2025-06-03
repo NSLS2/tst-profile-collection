@@ -5,8 +5,6 @@ from typing import Dict, Optional, Any
 from enum import Enum
 import json
 
-# import pprint
-
 
 def enum_to_dict(enum_class):
     """Convert enum to dictionary format"""
