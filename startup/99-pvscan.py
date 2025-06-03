@@ -99,6 +99,3 @@ def get_pv_types():
         json.dump(pv_types, f)
     return pv_types
 
-
-# Print out the PVs with their types.
-# pprint.pprint(pv_types)
