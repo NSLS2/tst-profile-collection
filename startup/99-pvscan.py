@@ -1,6 +1,6 @@
 print(f"Loading file {__file__!r} ...")
 
-from ophyd_async.core import Device, Signal, SignalRW
+from ophyd_async.core import Device, Signal
 from typing import Dict, Optional, Any
 from enum import Enum
 import json
@@ -63,26 +63,35 @@ def walk_signals(
     return signals
 
 
-# This is a dictionary that maps the Signals in the profile to their types and pvs.
-# pvs = {
-#     device.name: {
-#         signal.name: {
-#             "pv": signal.source,
-#             "type": (
-#                 enum_to_dict(signal._connector.backend.datatype)
-#                 if issubclass(signal._connector.backend.datatype, Enum)
-#                 else signal._connector.backend.datatype.__name__
-#             ),
-#         }
-#         for signal in walk_signals(device).values()
-#         if isinstance(signal, Signal)
-#     }
-#     for device in devices
-# }
+def get_signal_pv_types():
+    """
+    This is a dictionary that maps the Devices and Signals in the profile to their pvs and types.
+    """
+    
+    devices = [g for g in globals().values() if isinstance(g, Device)]
+    pvs = {
+        device.name: {
+            signal.name: {
+                "pv": signal.source,
+                "type": (
+                    enum_to_dict(signal._connector.backend.datatype)
+                    if issubclass(signal._connector.backend.datatype, Enum)
+                    else signal._connector.backend.datatype.__name__
+                ),
+            }
+            for signal in walk_signals(device).values()
+            if isinstance(signal, Signal)
+        }
+        for device in devices
+    }
+    return pvs
 
 
-# This is a dictionary that maps all of the PVs in the profile to their types.
 def get_pv_types():
+    """
+    This is a dictionary that maps all of the PVs in the profile to their types.
+    """
+    
     devices = [g for g in globals().values() if isinstance(g, Device)]
     pv_types = {
         signal.source: (
