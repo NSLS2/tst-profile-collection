@@ -49,8 +49,8 @@ ophyd-async = { version = ">=0.9.0, <0.10", extras = ["ca", "pva"] }
 
 
 [feature.qs.tasks]
-qs = "start-re-manager --profile-dir=."
-
+qs = "start-re-manager"
+http = "uvicorn --host localhost --port 60610 bluesky_httpserver.server:app"
 
 [feature.terminal.dependencies]
 ipython = "*"
