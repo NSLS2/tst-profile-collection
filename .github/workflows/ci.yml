@@ -12,6 +12,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   testing_beamline_profiles:
     name: ${{ matrix.repos.beamline-acronym }}-py${{ matrix.zenodo.python }}
