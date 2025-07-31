@@ -52,11 +52,12 @@ pyside6 = "*"
 
 
 [feature.terminal.tasks]
-bsui = "ipython --profile-dir=."
+start = "ipython --profile-dir=."
 pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
 black = "black ."
 pre-commit = "pre-commit run --all-files"
 
+
 [environments]
-bsui = {features=["profile", "terminal"], solve-group="profile"}
+terminal = {features=["profile", "terminal"], solve-group="profile"}
 qs = {features=["profile", "qs"], solve-group="profile"}
