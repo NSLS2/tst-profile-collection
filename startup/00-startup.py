@@ -26,8 +26,9 @@ RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
 autoawait_in_bluesky_event_loop()
 
 
-tiled_server = SimpleTiledServer()
-tiled_client = from_uri(tiled_server.uri)
+# tiled_server = SimpleTiledServer(readable_storage=["/nsls2/data/tst/"])
+# tiled_client = from_uri(tiled_server.uri)
+tiled_client = from_uri("http://10.69.59.213:8000", api_key="tst")
 tiled_writer = TiledWriter(tiled_client)
 RE.subscribe(tiled_writer)
 
