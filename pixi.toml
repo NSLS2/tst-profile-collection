@@ -15,7 +15,7 @@ matplotlib-base= ">=3.9.3,<4"
 networkx = ">=3.4.2,<4"
 nslsii = ">=0.11.2,<0.12"
 numpy = "*"
-ophyd = "*"
+ophyd = "==1.10.7"
 pyepics = "*"
 python = ">=3.12.11,<3.13"
 semver = ">=3.0.4,<4"
@@ -28,6 +28,7 @@ ply = ">=3.11,<4"
 colorlog = ">=6.9.0,<7"
 epicscorelibs = "*"
 pydantic-numpy = "*"
+bluesky = "==1.14.2"
 
 
 [feature.profile.pypi-dependencies]
