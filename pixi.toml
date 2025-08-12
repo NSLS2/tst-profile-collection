@@ -3,14 +3,13 @@ channels = ["conda-forge"]
 description = "Beamline profile for xf31id1"
 name = "TST-profile-collection"
 platforms = ["linux-64", "osx-64"]
-version = "2025-2.1"
+version = "2025-3.0"
 
 [system-requirements]
 libc = "2.17"
 
 [feature.profile.dependencies]
-bluesky-base = "*"
-bluesky-queueserver = "*"
+bluesky-base = ">=1.14.2,<2"
 matplotlib-base= ">=3.9.3,<4"
 networkx = ">=3.4.2,<4"
 nslsii = ">=0.11.2,<0.12"
@@ -28,10 +27,18 @@ ply = ">=3.11,<4"
 colorlog = ">=6.9.0,<7"
 # epicscorelibs = "*"
 pydantic-numpy = "*"
+bluesky-queueserver-api = ">=0.0.12,<0.0.13"
+bluesky-widgets = ">=0.0.17,<0.0.18"
 
 
 [feature.profile.pypi-dependencies]
 ophyd-async = { version = ">=0.9.0, <0.10", extras = ["ca", "pva"] }
+
+[feature.profile.target.linux-64.pypi-dependencies]
+ophyd-async = { version = ">=0.13.0", extras = ["ca", "pva"] }
+scanspec = ">=1.0a1"
+aioca = ">=2.0a4"
+epicscorelibs = ">=7.0.7.99.1.2a3"
 
 
 [feature.qs.dependencies]
