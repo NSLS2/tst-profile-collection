@@ -77,6 +77,8 @@ class FileLoadingTimer:
 
 warnings.filterwarnings("ignore")
 
+RE.md.update({"cycle": "2025-3", "data_session": "commissioning"})
+
 
 def warmup_hdf5_plugins(detectors):
     """
@@ -116,6 +118,8 @@ def show_env():
 TST_PROPOSAL_DIR_ROOT = "/nsls2/data/tst/legacy/mock-proposals"
 
 RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES" or DEBUG
+
+RUNNING_IN_NSLS2_CI = False
 
 if RUNNING_IN_NSLS2_CI:
     print("Running in CI, using mock mode when initializing devices...")

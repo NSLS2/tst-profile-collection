@@ -123,7 +123,7 @@ def tomo_demo_async(
     yield from bps.mv(rot_motor.velocity, 180 / 2)
 
 
-def xas_demo_async(
+def _xas_demo_async_old(
     panda,
     detector,
     npoints,
