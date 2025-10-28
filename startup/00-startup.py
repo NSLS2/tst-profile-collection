@@ -16,12 +16,14 @@ import nslsii
 import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
+from bluesky.plans import count, scan
 from bluesky.run_engine import RunEngine, autoawait_in_bluesky_event_loop
 from bluesky_queueserver import is_re_worker_active
 from IPython import get_ipython
 from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 from tiled.server import SimpleTiledServer
+from ophyd.sim import det, motor
 
 DEBUG = True
 
