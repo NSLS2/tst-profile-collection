@@ -1,4 +1,4 @@
-[project]
+[workspace]
 channels = ["conda-forge"]
 description = "Beamline profile for xf31id1"
 name = "TST-profile-collection"
