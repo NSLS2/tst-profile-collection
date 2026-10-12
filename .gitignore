@@ -127,9 +127,15 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# vim
+*.swp
+
 # Pyre type checker
 .pyre/
 
 # IPython service files:
 db/
 history*.sqlite
+
+
+pv_types.json

@@ -16,14 +16,24 @@ import nslsii
 import redis
 from bluesky.callbacks.broker import post_run, verify_files_saved
 from bluesky.callbacks.tiled_writer import TiledWriter
+from bluesky.plans import count, scan
 from bluesky.run_engine import RunEngine, autoawait_in_bluesky_event_loop
+from bluesky_queueserver import is_re_worker_active
 from IPython import get_ipython
+from ophyd.sim import det, motor
 from redis_json_dict import RedisJSONDict
 from tiled.client import from_uri
 from tiled.server import SimpleTiledServer
 
-RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
-autoawait_in_bluesky_event_loop()
+DEBUG = True
+
+if DEBUG:
+    RE = RunEngine()
+else:
+    RE = RunEngine(RedisJSONDict(redis.Redis("info.tst.nsls2.bnl.gov"), prefix=""))
+
+if not is_re_worker_active():
+    autoawait_in_bluesky_event_loop()
 
 
 # tiled_server = SimpleTiledServer(readable_storage=["/nsls2/data/tst/"])
@@ -31,16 +41,6 @@ autoawait_in_bluesky_event_loop()
 tiled_client = from_uri("http://10.69.59.213:8000", api_key="tst")
 tiled_writer = TiledWriter(tiled_client)
 RE.subscribe(tiled_writer)
-
-
-# This is needed for ophyd-async to enable 'await <>' instead of 'asyncio.run(<>)':
-ipython_session = get_ipython()
-# if ipython_session is not None and not isinstance(ipython_session, IPDummy):
-# ipython_session.run_line_magic("autoawait", "call_in_bluesky_event_loop")
-
-# PandA does not produce any data for plots for now.
-# bec.disable_plots()
-# bec.disable_table()
 
 
 def dump_doc_to_stdout(name, doc):
@@ -118,7 +118,7 @@ def show_env():
 
 TST_PROPOSAL_DIR_ROOT = "/nsls2/data/tst/legacy/mock-proposals"
 
-RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES"
+RUNNING_IN_NSLS2_CI = os.environ.get("RUNNING_IN_NSLS2_CI", "NO") == "YES" or DEBUG
 
 if RUNNING_IN_NSLS2_CI:
     print("Running in CI, using mock mode when initializing devices...")
