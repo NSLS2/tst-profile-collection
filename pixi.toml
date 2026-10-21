@@ -4,14 +4,18 @@ description = "Beamline profile for xf31id1"
 name = "TST-profile-collection"
 platforms = ["linux-64", "osx-64"]
 version = "2025.3.1"
+requires-pixi = ">=0.82.1"
 
 [system-requirements]
 libc = "2.17"
 
 [feature.profile.dependencies]
+ca-certificates = ">=2026.10.19"
+certifi = ">=2026.10.19"
+pip = ">=26.2.2"
 bluesky-base = "==1.14.6"
 bluesky-queueserver = "*"
-matplotlib-base= ">=3.9.3,<4"
+matplotlib-base = ">=3.9.3,<4"
 networkx = ">=3.4.2,<4"
 nslsii = "==0.11.4"
 numpy = "*"
@@ -59,13 +63,20 @@ pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
 [feature.dev.dependencies]
 black = "*"
 pre-commit = ">=4.2.0,<5"
-
+ca-certificates = ">=2026.10.19"
 
 [feature.dev.tasks]
 black = "black ."
 pre-commit = "pre-commit run --all-files"
 
-[environments]
-terminal = {features=["profile", "terminal"], solve-group="profile"}
-qs = {features=["profile", "qs"], solve-group="profile"}
-dev = {features=["dev"], no-default-feature = true}
+[environments.terminal]
+features = ["profile", "terminal"]
+solve-group = "profile"
+
+[environments.qs]
+features = ["profile", "qs"]
+solve-group = "profile"
+
+[environments.dev]
+features = ["dev"]
+no-default-feature = true
