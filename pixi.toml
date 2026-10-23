@@ -2,10 +2,7 @@
 channels = ["conda-forge"]
 description = "Beamline profile for xf31id1"
 name = "TST-profile-collection"
-platforms = [
-    { platform = "linux-64", glibc = "2.17" },
-    "osx-64",
-]
+platforms = [{ platform = "linux-64", glibc = "2.17" }, "osx-64"]
 version = "2025.3.1"
 requires-pixi = ">=0.82.1"
 
@@ -15,7 +12,11 @@ certifi = ">=2026.10.19"
 pip = ">=26.2.2"
 bluesky-base = "==1.15.0"
 bluesky-queueserver = "*"
+<<<<<<< HEAD
 matplotlib-base= ">=3.10"
+=======
+matplotlib-base = ">=3.10"
+>>>>>>> f617e1da2148cbfe2d4d0620b589a9de880d697a
 networkx = ">=3.4.2,<4"
 nslsii = "==0.11.8"
 numpy = "*"
