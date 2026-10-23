@@ -139,3 +139,4 @@ history*.sqlite
 
 
 pv_types.json
+.logs/
