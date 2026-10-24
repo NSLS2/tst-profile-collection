@@ -84,6 +84,7 @@ packages = ["src/tst_lab_tools"]
 
 [tool.pyright]
 typeCheckingMode = "standard"
+include = ["src", "tests"]
 
 [tool.pytest.ini_options]
 # Run pytest with all our checkers, and don't spam us with massive tracebacks on error
@@ -117,6 +118,7 @@ source = ["src"]
 
 [tool.ruff]
 target-version = "py311"
+extend-exclude = ["startup", "scripts"]
 line-length = 88
 lint.select = [
   "B",       # flake8-bugbear

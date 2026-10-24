@@ -67,9 +67,13 @@ nexpy = ">=2.0.3,<3"
 pyside6 = ">=6.9.0,<7"
 qtpy = ">=2.4.3,<3"
 
-[feature.terminal.tasks.start]
+[feature.terminal.tasks.start-tools]
 # Extra arguments, e.g. `--mock`, are forwarded to the profile
 cmd = "test -n \"$BS_PROFILE\" || (echo 'BS_PROFILE is not set, e.g. BS_PROFILE=collection' && exit 1) && unset SESSION_MANAGER PYTHONPATH PYTHONUSERBASE && MPLBACKEND=qtagg ipython -i src/tst_lab_tools/profiles/$BS_PROFILE.py --"
+
+[feature.terminal.tasks.start]
+# TODO: Replace with start-tools
+cmd = "unset SESSION_MANAGER PYTHONPATH PYTHONUSERBASE && MPLBACKEND=qtagg ipython --profile-dir=."
 
 [feature.py311.dependencies]
 python = "3.11.*"
