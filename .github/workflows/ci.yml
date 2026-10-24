@@ -1,53 +1,64 @@
-name: Test IPython beamline profiles
+name: CI
 
 on:
+  pull_request:
   push:
     branches:
       - main
-  pull_request:
-  workflow_dispatch:
-  workflow_call:
-    inputs:
-      version: # the variable you can use in place of a matrix
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
-  testing_beamline_profiles:
-    name: ${{ matrix.repos.beamline-acronym }}-py${{ matrix.zenodo.python }}
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pixi environment
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          pixi-version: v0.82.1
+          environments: dev
+
+      - name: Run pre-commit checks
+        run: pixi run --as-is -e dev pre-commit run --all-files --show-diff-on-failure
+
+  unit-tests:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        repos:
-          - org: "NSLS2"
-            repo: "tst-profile-collection"
-            branch: ""
-            beamline-acronym: "tst"
-        zenodo:
-          - url: "https://zenodo.org/records/15636681/files/2025-2.2-py310-tiled.tar.gz"
-            md5: "3c9a3cb2fe30692c3cf71d92c03a359d"
-            python: "3.10"
-          - url: "https://zenodo.org/records/15636681/files/2025-2.2-py311-tiled.tar.gz"
-            md5: "346e39f6269f04cde26108c7eab3f989"
-            python: "3.11"
-          - url: "https://zenodo.org/records/15636681/files/2025-2.2-py312-tiled.tar.gz"
-            md5: "345b8e9eff936378a780c82214e7171d"
-            python: "3.12"
-
-    runs-on: ubuntu-latest
+        include:
+          - environment: py311
+            python-version: "3.11"
+          - environment: py312
+            python-version: "3.12"
+          - environment: py313
+            python-version: "3.13"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Integration Tests Against Beamline Profiles
-        uses: NSLS2/gha-beamline-integration-test@2025-1.0-test
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          conda_env_url: "${{ matrix.zenodo.url }}"
-          conda_env_md5: "${{ matrix.zenodo.md5 }}"
-          org: "${{ matrix.repos.org }}"
-          repo: "${{ matrix.repos.repo }}"
-          branch: "${{ matrix.repos.branch }}"
-          beamline-acronym: "${{ matrix.repos.beamline-acronym }}"
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pixi environment
+        uses: prefix-dev/setup-pixi@ad1da6449d9e506fd127fd67ab2d054a769f6a94 # v0.11.2
+        with:
+          pixi-version: v0.82.1
+          environments: ${{ matrix.environment }}
+
+      - name: Run tests
+        run: pixi run --as-is -e ${{ matrix.environment }} tests
+
+      - name: Build distributions
+        run: pixi run --as-is -e ${{ matrix.environment }} hatch build

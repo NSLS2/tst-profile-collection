@@ -1,41 +1,57 @@
 [workspace]
 channels = ["conda-forge"]
-description = "Beamline profile for xf31id1"
-name = "TST-profile-collection"
+name = "tst-lab-tools"
 platforms = [{ platform = "linux-64", glibc = "2.17" }, "osx-64"]
-version = "2025.3.1"
+version = "2026.3.0"
 requires-pixi = ">=0.82.1"
+# Skip packages published in the last 7 days to limit exposure to compromised releases
+exclude-newer = "7d"
 
-[feature.profile.dependencies]
+[dependencies]
+bluesky-tiled-plugins = ">=2.0.9,<3"
 ca-certificates = ">=2026.10.19"
 certifi = ">=2026.10.19"
+ipython = ">=9.16.1,<10"
+nslsii = "==0.11.8"
+ophyd-async = ">=0.16,<0.17"
 pip = ">=26.2.2"
+python = ">=3.11,<3.14"
+redis-json-dict = ">=0.2.2,<0.3"
+tiled-client = ">=0.2.14,<0.3"
+
+[exclude-newer]
+# Security floors in [dependencies] may need fixes published within the cooldown
+ca-certificates = "0d"
+certifi = "0d"
+pip = "0d"
+
+[pypi-dependencies]
+tst-lab-tools = { path = ".", editable = true }
+
+[feature.profile.dependencies]
 bluesky-base = "==1.15.0"
 bluesky-queueserver = "*"
 matplotlib-base = ">=3.10"
 networkx = ">=3.4.2,<4"
-nslsii = "==0.11.8"
 numpy = "*"
 ophyd = ">=1.11.0"
 pyepics = "*"
-python = ">=3.12,<3.13"
+python = ">=3.11,<3.15"
 semver = ">=3.0.4,<4"
-tiled-client = "==0.2.9"
 hdf5-external-filter-plugins = ">=0.1.0,<0.2"
 blosc-hdf5-plugin = ">=1.0.1,<2"
 databroker = "==2.0.0"
 epicscorelibs = ">=7.0.7.99.1.1,<8"
-bluesky-tiled-plugins = "==2.0.2"
 ophyd-async = "*"
-
 
 [feature.profile.pypi-dependencies]
 pvxslibs = ">=1.3.2, <2"
 
+[feature.qs.pypi-dependencies]
+bluesky-httpserver = ">=0.0.12,<0.0.13"
+bluesky-queueserver = ">=0.0.25,<0.0.26"
+bluesky-queueserver-api = ">=0.0.13,<0.0.14"
 
-[feature.qs.dependencies]
-bluesky-queueserver = "*"
-bluesky-httpserver = "*"
 
 [feature.qs.tasks]
 # This section needs some development work to understand the best way to
@@ -45,39 +61,81 @@ bluesky-httpserver = "*"
 qs-backend = "start-re-manager --profile-dir=."
 qs-server = "uvicorn --host localhost --port 60610 bluesky_httpserver.server:app"
 
-
 [feature.terminal.dependencies]
-ipython = ">=9.5.0"
-pyside6 = "*"
-numpy = ">2"
+matplotlib = ">=3.10.9,<4"
+nexpy = ">=2.0.3,<3"
+pyside6 = ">=6.9.0,<7"
+qtpy = ">=2.4.3,<3"
 
+[feature.terminal.tasks.start-tools]
+# Extra arguments, e.g. `--mock`, are forwarded to the profile
+cmd = "test -n \"$BS_PROFILE\" || (echo 'BS_PROFILE is not set, e.g. BS_PROFILE=collection' && exit 1) && unset SESSION_MANAGER PYTHONPATH PYTHONUSERBASE && MPLBACKEND=qtagg ipython -i src/tst_lab_tools/profiles/$BS_PROFILE.py --"
 
-[feature.terminal.tasks]
-start = "unset SESSION_MANAGER PYTHONPATH && MPLBACKEND=qtagg ipython --profile-dir=."
-pvs = "ipython --profile-dir=. -c 'get_pv_types(); exit()'"
+[feature.terminal.tasks.start]
+# TODO: Replace with start-tools
+cmd = "unset SESSION_MANAGER PYTHONPATH PYTHONUSERBASE && MPLBACKEND=qtagg ipython --profile-dir=."
 
+[feature.py311.dependencies]
+python = "3.11.*"
+
+[feature.py312.dependencies]
+python = "3.12.*"
+
+[feature.py313.dependencies]
+python = "3.13.*"
 
 [feature.dev.dependencies]
-black = "*"
-ca-certificates = ">=2026.10.19"
-isort = "*"
-nbstripout = "*"
-pre-commit = ">=4.2.0,<5"
-pre-commit-hooks = "*"
-virtualenv = ">=21.14.12"
+copier = ">=9.19.1,<10"
+hatch = ">=1.18.1,<2"
+import-linter = ">=2.13,<3"
+inflection = ">=0.5.1,<0.6"
+mdformat = ">=1.0.0,<2"
+mdformat-frontmatter = ">=2.1.2,<3"
+mdformat-ruff = ">=0.1.3,<0.2"
+nbstripout = ">=0.9.1,<0.10"
+pre-commit = ">=4.6.1,<5"
+pre-commit-hooks = ">=6.0.0,<7"
+pyright = ">=1.1.414,<2"
+pytest = ">=9.1.1,<10"
+pytest-asyncio = ">=1.4.0,<2"
+pytest-cov = ">=7.1.0,<8"
+pytest-mock = ">=3.15.1,<4"
+pytest-timeout = ">=2.4.0,<3"
+ruff = ">=0.16.2,<0.17"
+tiled-server = ">=0.2.14,<0.3"
 
 [feature.dev.tasks]
-black = "black ."
-pre-commit = "pre-commit run --all-files"
+tests = "pytest --cov=src/tst_lab_tools --cov-report=term"
+lint = "pre-commit run --all-files"
+update-template = "copier update --trust ."
 
-[environments.terminal]
-features = ["profile", "terminal"]
-solve-group = "profile"
+[environments]
+# Base environments
+default = { solve-group = "default" }
+dev = { features = ["profile", "terminal", "dev"], solve-group = "default" }
 
-[environments.qs]
-features = ["profile", "qs"]
-solve-group = "profile"
+# Profile environments
+terminal = { features = ["profile", "terminal"], solve-group = "profile" }
 
-[environments.dev]
-features = ["dev"]
-no-default-feature = true
+# Python version specific environments for CI
+py311 = { features = [
+  "profile",
+  "terminal",
+  "dev",
+  "py311",
+], solve-group = "py311" }
+py312 = { features = [
+  "profile",
+  "terminal",
+  "dev",
+  "py312",
+], solve-group = "py312" }
+py313 = { features = [
+  "profile",
+  "terminal",
+  "dev",
+  "py313",
+], solve-group = "py313" }
+
+# Queueserver environment
+qs = { features = ["profile", "qs"], solve-group = "qs" }
