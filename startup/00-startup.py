@@ -8,6 +8,8 @@ import os
 import subprocess
 import time as ttime
 import warnings
+from logging.handlers import SysLogHandler, TimedRotatingFileHandler
+from pathlib import Path
 
 import bluesky.plan_stubs as bps
 import bluesky.plans as bp
@@ -50,6 +52,76 @@ def dump_doc_to_stdout(name, doc):
 
 
 RE.subscribe(dump_doc_to_stdout)
+
+
+LOG_FILE_FORMAT = (
+    "[%(levelname)1.1s %(asctime)s.%(msecs)03d %(name)s"
+    "  %(module)s:%(lineno)d] %(message)s"
+)
+# No timestamp: syslog adds it. The logger name becomes the "app" label in Loki.
+SYSLOG_FORMAT = "%(name)s[%(process)s]: %(levelname)s - %(module)s:%(lineno)d] %(message)s"
+
+
+def configure_tst_logging():
+    """Log to a local rotating file and, where available, to syslog.
+
+    Syslog is forwarded to log.nsls2.bnl.gov and shipped to Loki, where the
+    "TST" logger shows up as app="TST" for this host.
+    """
+    # bluesky, ophyd, caproto and nslsii loggers: file (BLUESKY_LOG_FILE or
+    # the appdirs default) plus syslog. configure_base() does this on other
+    # beamlines, but this profile does not call it.
+    bluesky_log_path = nslsii.configure_bluesky_logging(ipython=get_ipython())
+    tst_log_path = Path(bluesky_log_path).parent / "tst-profile.log"
+
+    tst_logger = logging.getLogger("TST")
+    tst_logger.setLevel(logging.DEBUG)
+    tst_logger.propagate = False
+
+    file_handler = TimedRotatingFileHandler(
+        str(tst_log_path), when="W0", backupCount=10
+    )
+    file_handler.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+    file_handler.setFormatter(
+        logging.Formatter(fmt=LOG_FILE_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
+    )
+    tst_logger.addHandler(file_handler)
+
+    if Path("/dev/log").exists():
+        syslog_handler = SysLogHandler(address="/dev/log")
+        syslog_handler.setLevel(logging.INFO)
+        syslog_handler.setFormatter(logging.Formatter(fmt=SYSLOG_FORMAT))
+        tst_logger.addHandler(syslog_handler)
+
+    print(f"TST profile log file: '{tst_log_path}'")
+    return tst_logger
+
+
+logger = configure_tst_logging()
+logger.info("Starting TST profile (DEBUG=%s)", DEBUG)
+
+
+def log_run_documents(name, doc):
+    if name == "start":
+        logger.info(
+            "Run start: uid=%s scan_id=%s plan_name=%s",
+            doc["uid"],
+            doc.get("scan_id"),
+            doc.get("plan_name"),
+        )
+    elif name == "stop":
+        level = logging.INFO if doc["exit_status"] == "success" else logging.WARNING
+        logger.log(
+            level,
+            "Run stop: uid=%s exit_status=%s num_events=%s reason=%r",
+            doc["run_start"],
+            doc["exit_status"],
+            doc.get("num_events"),
+            doc.get("reason"),
+        )
+
+
+RE.subscribe(log_run_documents)
 
 
 def now():
