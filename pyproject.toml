@@ -35,7 +35,6 @@ dev = [
   "import-linter",
   "mdformat",
   "mdformat-frontmatter",
-  "mdformat-ruff",
   "nbstripout",
   "pre-commit",
   "pre-commit-hooks",

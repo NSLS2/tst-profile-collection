@@ -9,6 +9,7 @@ from bluesky import plan_stubs as bps
 from bluesky import plans as bp
 from bluesky import preprocessors as bpp
 from bluesky.callbacks.best_effort import BestEffortCallback
+from bluesky.callbacks.buffer import BufferingWrapper
 from bluesky.magics import BlueskyMagics
 from bluesky.run_engine import RunEngine, autoawait_in_bluesky_event_loop
 from bluesky.utils import ProgressBarManager, ts_msg_hook
@@ -25,6 +26,11 @@ import tst_lab_tools
 
 # Have ophyd-async keep detector state constant when not explicitly overridden
 os.environ["OPHYD_ASYNC_PRESERVE_DETECTOR_STATE"] = "YES"
+TLA = (
+    os.environ.get("ENDSTATION_ACRONYM")
+    or os.environ.get("BEAMLINE_ACRONYM")
+    or "Unknown"
+)
 
 # Mechanism for passing arguments to profile.
 _parser = argparse.ArgumentParser("Collection profile for tst-lab-tools.")
@@ -36,6 +42,12 @@ _parser.add_argument(
 
 # Determine if we are running in CI/mock mode
 MOCK = vars(_parser.parse_args())["mock"]
+
+# Where TiledWriter backs up documents it could not write to Tiled.
+if MOCK:
+    TILED_BACKUP_ROOT = "/tmp/bluesky-docs"
+else:
+    TILED_BACKUP_ROOT = f"/nsls2/data/{TLA.lower()}/shared/config/bluesky/tiled_backup"
 
 # Construct a RunEngine with either an in-process metadata dict,
 # or a redis-backed metadata store.
@@ -65,11 +77,7 @@ RE.md["facility"] = "NSLS-II"
 RE.md["beamline_id"] = "31-ID-1"
 
 # Attempt to extract TLA from environment variables.
-RE.md["group"] = TLA = (
-    os.environ.get("ENDSTATION_ACRONYM")
-    or os.environ.get("BEAMLINE_ACRONYM")
-    or "Unknown"
-).upper()
+RE.md["group"] = TLA.upper()
 
 # Get the IPython shell and set up the custom prompt to show the current proposal ID.
 ipython = get_ipython()
@@ -110,8 +118,9 @@ else:
     tiled_writing_client = tiled_reading_client = c = simple()
 
 
-# Subscribe the tiled writer to the RunEngine
-RE.subscribe(TiledWriter(tiled_writing_client))
+# Subscribe the tiled writer to the RunEngine, buffered so slow writes don't block it
+tiled_writer = TiledWriter(tiled_writing_client, backup_directory=TILED_BACKUP_ROOT)
+RE.subscribe(BufferingWrapper(tiled_writer))
 
 # Set up our default path provider
 path_provider = NSLS2PathProvider(RE.md)
